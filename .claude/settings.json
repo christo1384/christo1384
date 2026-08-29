@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "zenetusken-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "Zenetusken/consolidate-memory"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "consolidate-memory@zenetusken-plugins": true
+  }
+}
