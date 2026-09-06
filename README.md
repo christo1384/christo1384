@@ -11,8 +11,11 @@
 - [construction-skills-toolkit](https://github.com/christo1384/construction-skills-toolkit) — DDC construction skills catalog + CAD automation
 - [LS_PM_SYS](https://github.com/christo1384/LS_PM_SYS) — Simpson Strong-Tie maintenance docs, reference only
 
+**Tooling I'm evaluating** (not mine — forks kept for assessment)
+- [sandeshnaroju/ai-skill-engine](https://github.com/sandeshnaroju/ai-skill-engine) — self-hosted OpenAI-compatible gateway that runs `SKILL.md`-defined tools in a sandbox (Apache-2.0). Evaluating as a single endpoint to expose the Steelcraft skills to Power Automate / Teams. Fork pending.
+
 **Reference forks** (archived, kept for reading — not active development)
 - ~30 forks of `datadrivenconstruction/*` — Revit/IFC/BIM tooling reference library
 
 ---
-*Repo list last reorganized 2026-08-29.*
+*Repo list last reorganized 2026-09-06.*
