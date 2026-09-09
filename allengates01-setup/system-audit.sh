@@ -10,6 +10,7 @@
 # stats, journal). Run it once as your own user, then once with sudo, and
 # compare. It changes nothing either way.
 
+# shellcheck disable=SC2088  # tildes in messages are display text, not paths
 set -u
 
 hr()   { printf '\n== %s ==\n' "$1"; }
@@ -125,6 +126,40 @@ else
     info "docker not available to this user or not running — re-run with sudo"
 fi
 
+hr "Compose files (static check, works without docker access)"
+for c in "$HOME"/ai-stack/docker-compose*.yml "$HOME"/ai-stack/compose*.yml "$HOME"/*/docker-compose*.yml; do
+    [ -f "$c" ] || continue
+    info "$c"
+    if have python3 && python3 -c 'import yaml' 2>/dev/null; then
+        python3 - "$c" <<'PY'
+import sys, yaml
+try:
+    doc = yaml.safe_load(open(sys.argv[1])) or {}
+except Exception as e:
+    print("         (could not parse:", e, ")"); sys.exit(0)
+for name, svc in (doc.get("services") or {}).items():
+    if not isinstance(svc, dict):
+        continue
+    lim = svc.get("mem_limit") or ((svc.get("deploy") or {}).get("resources") or {}).get("limits", {}).get("memory")
+    priv = " PRIVILEGED" if svc.get("privileged") else ""
+    ports = svc.get("ports") or []
+    wide = [p for p in ports if isinstance(p, str) and not p.startswith(("127.", "localhost", "192.", "10.", "172."))]
+    flag = "  [ok]   " if lim else "  [WARN] "
+    extra = ("  ports on all interfaces: " + ", ".join(wide)) if wide else ""
+    print(f"{flag}{name:<22} mem_limit={lim or 'NONE'}{priv}{extra}")
+PY
+    else
+        # Fallback without PyYAML: count services vs mem_limit lines.
+        svc_n="$(grep -cE '^    [A-Za-z0-9_.-]+:\s*$' "$c" || true)"
+        lim_n="$(grep -cE '^\s+mem_limit:' "$c" || true)"
+        if [ "${lim_n:-0}" -lt "${svc_n:-0}" ]; then
+            warn "$svc_n services, $lim_n with mem_limit (install python3-yaml for a per-service view)"
+        else
+            ok "$svc_n services, all with mem_limit"
+        fi
+    fi
+done
+
 hr "SSH exposure"
 if have sshd || [ -f /etc/ssh/sshd_config ]; then
     if is_root && have sshd; then
@@ -132,8 +167,8 @@ if have sshd || [ -f /etc/ssh/sshd_config ]; then
         pa="$(printf '%s\n' "$eff" | awk '$1=="passwordauthentication"{print $2}')"
         prl="$(printf '%s\n' "$eff" | awk '$1=="permitrootlogin"{print $2}')"
         port="$(printf '%s\n' "$eff" | awk '$1=="port"{print $2}' | tr '\n' ' ')"
-        [ "$pa" = "no" ] && ok "password authentication off" || warn "password authentication is ${pa:-on (default)}"
-        [ "$prl" = "no" ] && ok "root login off" || warn "PermitRootLogin is ${prl:-default}"
+        if [ "$pa" = "no" ]; then ok "password authentication off"; else warn "password authentication is ${pa:-on (default)}"; fi
+        if [ "$prl" = "no" ]; then ok "root login off"; else warn "PermitRootLogin is ${prl:-default}"; fi
         info "listening on port(s): ${port:-22}"
     else
         info "effective sshd config needs root — re-run with sudo. Static file says:"
@@ -230,17 +265,17 @@ done
 for e in "$HOME"/ai-stack/.env "$HOME"/*/.env; do
     [ -f "$e" ] || continue
     mode="$(stat -c %a "$e")"
-    [ "$mode" = "600" ] && ok "$e is mode 600" || warn "$e is mode $mode — should be 600"
+    if [ "$mode" = "600" ]; then ok "$e is mode 600"; else warn "$e is mode $mode — should be 600"; fi
 done
 if [ -d "$HOME/ai-stack/.git" ] && git -C "$HOME/ai-stack" ls-files --error-unmatch .env >/dev/null 2>&1; then
     warn "~/ai-stack/.env is tracked by git"
 fi
 if [ -d "$HOME/.config/rclone" ]; then
     mode="$(stat -c %a "$HOME/.config/rclone/rclone.conf" 2>/dev/null)"
-    [ "$mode" = "600" ] && ok "rclone.conf is mode 600" || warn "rclone.conf is mode ${mode:-missing}"
+    if [ "$mode" = "600" ]; then ok "rclone.conf is mode 600"; else warn "rclone.conf is mode ${mode:-missing}"; fi
 fi
 sudoers_nopw="$(sudo -n -l 2>/dev/null | grep -c NOPASSWD || true)"
-[ "${sudoers_nopw:-0}" -gt 0 ] && info "this user has NOPASSWD sudo entries" || true
+if [ "${sudoers_nopw:-0}" -gt 0 ]; then info "this user has NOPASSWD sudo entries"; fi
 
 hr "Disk"
 df -h --output=target,size,avail,pcent -x tmpfs -x devtmpfs -x overlay 2>/dev/null | sed 's/^/  /'
@@ -248,7 +283,7 @@ df --output=pcent,target -x tmpfs -x devtmpfs -x overlay 2>/dev/null | awk 'NR>1
 if have smartctl && is_root; then
     for d in /dev/sd? /dev/nvme?n1; do
         [ -e "$d" ] || continue
-        smartctl -H "$d" 2>/dev/null | grep -q PASSED && ok "SMART $d PASSED" || warn "SMART $d not PASSED or unreadable"
+        if smartctl -H "$d" 2>/dev/null | grep -q PASSED; then ok "SMART $d PASSED"; else warn "SMART $d not PASSED or unreadable"; fi
     done
 fi
 

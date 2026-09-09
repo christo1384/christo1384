@@ -8,6 +8,7 @@
 # It prints what is already installed and what already exists so the
 # drafts here can be compared against reality. It changes nothing.
 
+# shellcheck disable=SC2088  # tildes below are display text, not paths
 set -u
 
 hr() { printf '\n== %s ==\n' "$1"; }

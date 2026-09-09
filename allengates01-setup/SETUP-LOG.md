@@ -105,3 +105,27 @@ min protocol, presence of any backup timer/cron, secrets in shell history
 and compose files, `.env` and rclone.conf modes, and disk usage. Every
 `[WARN]` line is a to-do for the system-standard session. Root-only checks
 say so and ask for a `sudo` re-run rather than guessing.
+
+**Added (2026-09-10 NZT, still from the cloud session)**:
+- `REMEDIATION.md` — one fix per `[WARN]` the system audit can raise, with
+  the reasoning and the order to do them (fstab first, then memory limits,
+  then SSH/firewall, then backups). Includes a starting memory-limit table
+  for the box's containers and the "stop Ollama if nothing uses it" call.
+- `apply.sh` — Phase 2/3/4 made repeatable. Dry run by default, `--apply`
+  to execute. Backs up existing `~/.claude/` files to a timestamped folder,
+  replaces a symlinked `CLAUDE.md` with a real file, copies unchanged files
+  as no-ops, scaffolds `~/claude/` project folders from the manifest table
+  and seeds each NEW one from `project-template/`. Never overwrites an
+  existing project folder or `MANIFEST.md`, never deletes, refuses root.
+  Tested as a non-root user in the sandbox: dry run, apply, re-apply with
+  a symlinked `CLAUDE.md` in place — all behaved as documented.
+- `brain-hub-sync/` — Phase 8 as files: a user-scope systemd service and
+  15-minute timer for `rclone sync` local → Drive, with `--backup-dir` so
+  overwritten/deleted files survive 30 days, an `ExecCondition` that skips
+  the run when Drive is unreachable, and a README covering rclone login,
+  install, linger, and the one-way-mirror caveat. Unit files pass
+  `systemd-analyze verify` apart from rclone not existing in the sandbox.
+- `system-audit.sh` now also statically checks compose files for services
+  with no `mem_limit`, privileged flag, and ports bound on all interfaces —
+  useful when the docker socket is not readable as the normal user. Both
+  audit scripts are shellcheck-clean.

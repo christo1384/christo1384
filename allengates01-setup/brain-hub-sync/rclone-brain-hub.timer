@@ -1,0 +1,14 @@
+[Unit]
+Description=Run the Brain Hub mirror every 15 minutes
+
+[Timer]
+# First run 2 minutes after login/boot, then every 15 minutes.
+OnBootSec=2min
+OnUnitActiveSec=15min
+# If the box was asleep or off when a run was due, run once on wake.
+Persistent=true
+# Spread the start a little so it does not collide with other timers.
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

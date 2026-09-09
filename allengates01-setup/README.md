@@ -40,6 +40,13 @@ checked against the current docs (`code.claude.com/docs/en/memory`,
 - `system-audit.sh` — read-only box-hygiene audit (patches, fstab, memory,
   Docker limits, SSH, firewall, Samba, backups, secrets, disk); run once as
   your user and once with `sudo`, then work the `[WARN]` lines
+- `REMEDIATION.md` — the fix for every `[WARN]` line `system-audit.sh` can
+  print, in the order to work them
+- `apply.sh` — applies `claude-global/` to `~/.claude/` and scaffolds
+  `~/claude/` from the manifest. Dry run by default; `--apply` to execute.
+  Backs up anything it overwrites, never deletes, refuses to run as root
+- `brain-hub-sync/` — Phase 8: rclone user-timer templates and the setup
+  steps for the Google Drive mirror
 
 ## How Chris applies this
 
@@ -47,13 +54,16 @@ On `allengates01`, in a real Claude Code (or Cowork) session:
 
 1. Run `bash audit.sh` (read-only) and compare its output against what's
    here — it covers the Phase 0 checks from the plan.
-2. Copy `claude-global/CLAUDE.md` to `~/.claude/CLAUDE.md` **as a real file,
-   not a symlink** (Cowork skips symlinked user-scope files).
-3. Copy `claude-global/rules/` to `~/.claude/rules/`.
-4. Review `claude-global/settings.json` against `claude doctor` output, then
-   copy to `~/.claude/settings.json`.
-5. Use `project-template/` as the starting point for each project folder in
-   Phase 2, then continue with Phases 5–9 for real, on the machine.
+2. Run `bash system-audit.sh`, then `sudo bash system-audit.sh`, and work
+   the `[WARN]` lines using `REMEDIATION.md`.
+3. Run `bash apply.sh` to see the plan, then `bash apply.sh --apply`. It
+   copies `claude-global/` into `~/.claude/` as real files (Cowork skips
+   symlinks), backs up anything already there, and scaffolds `~/claude/`
+   with the project folders from the manifest.
+4. `claude doctor`, then `/init` in each project folder to fill in its
+   `CLAUDE.md`.
+5. Follow `brain-hub-sync/README.md` for the rclone mirror (Phase 8), then
+   Phases 5–7 and 9 (skills, MCP, Cowork test, verification checklist).
 
 Everything here is a draft for Chris to read, edit, and approve before it
 touches the live machine — nothing in this folder has been installed
