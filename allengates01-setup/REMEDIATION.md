@@ -210,7 +210,7 @@ Assistant config, Samba config, and the vault (already in git). The
 repository in Google Drive via the same `gdrive:` rclone remote, a nightly
 user timer, retention, and the restore test. Follow `backup/README.md`.
 
-Do this **before** the fstab, memory and SSH changes below, so every one
+Do this **before** the fstab, memory and SSH changes above, so every one
 of them is made on a box that can be put back.
 
 A backup nobody has restored from is a hope, not a backup. The README's

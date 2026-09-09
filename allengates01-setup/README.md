@@ -34,6 +34,8 @@ checked against the current docs (`code.claude.com/docs/en/memory`,
 - `claude-global/CLAUDE.md` — draft for `~/.claude/CLAUDE.md`
 - `claude-global/rules/*.md` — draft for `~/.claude/rules/`
 - `claude-global/settings.json` — draft for `~/.claude/settings.json`
+- `MANIFEST-template.md` — the six known projects, one line each; `apply.sh`
+  reads the path column to know which folders to create
 - `project-template/` — the per-project skeleton from Phase 2 (`CLAUDE.md`,
   `.claude/`, `.gitignore`)
 - `SETUP-LOG.md` — what was checked, what was drafted, what's still open
