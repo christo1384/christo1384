@@ -60,7 +60,9 @@ Work the warnings in this order; each one is in `REMEDIATION.md`.
 - [ ] Update each project's status line in `~/claude/MANIFEST.md`
 - [ ] `claude-repo/README.md`: make `~/claude` a git repo with the
       provided `.gitignore`, push to a private remote
-- [ ] `bash verify.sh` — expect Phase 8 to skip and Phase 7 to be manual
+- [ ] `bash verify.sh` — expect the Phase 8 timer checks to fail until
+      Session 4 installs it (rclone is already there from the backup step),
+      and Phase 7 to be manual. Everything else should pass.
 
 ## Session 4 — sync, skills, MCP, Cowork (45 min)
 
