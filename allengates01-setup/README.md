@@ -56,6 +56,9 @@ checked against the current docs (`code.claude.com/docs/en/memory`,
   container, sized so the box cannot be pushed into swap again
 - `PHASE6-skills-mcp.md` — proposed global vs Steelcraft-only skill split
   (client-data rule), MCP server scopes, and the open decisions
+- `claude-repo/` — open item 3: how to make `~/claude` a git repo that
+  tracks the config and ignores every project folder, plus the rebuild-
+  from-three-clones procedure
 
 ## How Chris applies this
 

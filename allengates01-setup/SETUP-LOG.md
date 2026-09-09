@@ -160,3 +160,15 @@ say so and ask for a `sudo` re-run rather than guessing.
   manifest's "no client data on this box" rule. Also proposes MCP scopes
   and recommends making `~/claude/` a git repo (open item 3) with project
   folders ignored, so the box is rebuildable from three clones.
+
+**08:30 NZT pass**
+- Fixture test of `system-audit.sh` (a fake `~/ai-stack` with a compose
+  file, a 644 `.env` and a key in shell history) found the compose and
+  `.env` checks printing every finding twice: two overlapping globs. Fixed;
+  every branch of those sections is now exercised by the test.
+- `claude-repo/` — open item 3 answered as a template: a `.gitignore`
+  that tracks `MANIFEST.md` and shared skills while ignoring every
+  manifest project folder, `brain-hub-sync/`, nested repos and secrets,
+  and a README with the init steps and the three-clone rebuild. Verified
+  against the scaffolded test home: only `MANIFEST.md` and `.gitignore`
+  are tracked.

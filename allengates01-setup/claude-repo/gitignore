@@ -1,0 +1,33 @@
+# ~/claude — track the config, not the projects.
+
+# Project folders from MANIFEST.md: each is its own git repo.
+/weekends-back/
+/minute-man/
+/steelcraft/
+/home/
+
+# Mirrored to Drive by the rclone timer; may hold client deliverables.
+/brain-hub-sync/
+
+# Catch-all: any nested repo.
+**/.git/
+
+# Secrets, wherever they land.
+.env
+.env.*
+*.key
+*.pem
+credentials*
+*.cred
+
+# Claude Code local state.
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Editor / OS noise.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*~
+*.swp

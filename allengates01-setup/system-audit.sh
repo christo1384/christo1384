@@ -127,7 +127,7 @@ else
 fi
 
 hr "Compose files (static check, works without docker access)"
-for c in "$HOME"/ai-stack/docker-compose*.yml "$HOME"/ai-stack/compose*.yml "$HOME"/*/docker-compose*.yml; do
+for c in "$HOME"/*/docker-compose*.yml "$HOME"/*/compose*.yml; do   # ~/ai-stack is covered by the wildcard
     [ -f "$c" ] || continue
     info "$c"
     if have python3 && python3 -c 'import yaml' 2>/dev/null; then
@@ -254,7 +254,7 @@ for h in "$HOME/.bash_history" "$HOME/.zsh_history"; do
         fi
     fi
 done
-for c in "$HOME"/ai-stack/docker-compose*.yml "$HOME"/*/docker-compose*.yml; do
+for c in "$HOME"/*/docker-compose*.yml "$HOME"/*/compose*.yml; do
     [ -f "$c" ] || continue
     if grep -qE '(sk-or-|sk-ant-|ghp_|github_pat_)[A-Za-z0-9_-]{8,}' "$c"; then
         warn "literal API key in $c — move it to .env"
@@ -262,7 +262,7 @@ for c in "$HOME"/ai-stack/docker-compose*.yml "$HOME"/*/docker-compose*.yml; do
         ok "no literal API keys in $c"
     fi
 done
-for e in "$HOME"/ai-stack/.env "$HOME"/*/.env; do
+for e in "$HOME"/*/.env; do
     [ -f "$e" ] || continue
     mode="$(stat -c %a "$e")"
     if [ "$mode" = "600" ]; then ok "$e is mode 600"; else warn "$e is mode $mode — should be 600"; fi
