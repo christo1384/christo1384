@@ -44,8 +44,10 @@ which only Chris can do.
   `Brain Hub/allengates01-archive/<date>/`, so a bad sync is recoverable.
 - `--dry-run` is in the service file's comments; run it once before the
   first real sync if the Drive folder already has content.
-- The unit runs `rclone check` first and skips the sync if the remote is
-  unreachable, so an offline box does not leave a half-mirrored folder.
+- The unit lists the remote root first (`ExecCondition`) and skips the
+  sync if that fails, so an offline box or an expired token does not
+  leave a half-mirrored folder. `rclone sync` itself never half-applies a
+  delete: it only removes remote files after the copy phase succeeds.
 
 ## What to sync
 

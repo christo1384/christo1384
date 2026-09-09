@@ -18,12 +18,12 @@ re-downloadable and would blow the Drive quota.
 | `~/.config/rclone` | the Drive token; without it a restore cannot reach the backups |
 | `/etc/samba`, `/etc/fstab`, `/etc/ssh/sshd_config.d` | the hand-edited system config |
 
-The `/etc` paths need read access; the unit runs as your user, so either
-add yourself to the relevant groups or keep a root-readable copy in
-`~/etc-snapshot` refreshed by a tiny root cron (`cp -a`). The simpler
-route: `sudo chmod o+r /etc/fstab /etc/samba/smb.conf` is fine for those
-two, they contain no secrets once fstab credentials live in a `.cred`
-file.
+The unit runs as your user. On Debian, `/etc/fstab`, `/etc/samba/smb.conf`
+and `/etc/ssh/sshd_config.d/*.conf` are world-readable by default, so this
+works as-is; if `restic backup` reports a permission error on one of them,
+drop that path from `BACKUP_PATHS` rather than loosening permissions. None
+of them should contain secrets once fstab credentials live in a `.cred`
+file (which is deliberately *not* in the list).
 
 Edit `BACKUP_PATHS` in the `.service` file to match what actually exists;
 `restic` errors on a missing path.

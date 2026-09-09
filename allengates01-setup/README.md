@@ -5,11 +5,12 @@ box): Claude Code install, folder layout, global instructions, permissions,
 skills, MCP, Cowork, and an rclone sync to the Brain Hub in Google Drive.
 
 **This folder is not that.** It's the part of the job that could actually be
-done from here.
+done from here: the drafts, plus scripts that let the on-box session audit,
+apply and verify in minutes instead of re-deriving the plan.
 
 ## Why this session couldn't run the plan
 
-The plan (see `SETUP-LOG.md` for the full text) is written to run *on*
+The plan (phases summarised in `SETUP-LOG.md`) is written to run *on*
 `allengates01` — it reads `~/.claude/`, runs `claude doctor`, checks
 installed packages, edits `~/.claude/settings.json`, configures rclone and a
 systemd timer, and drives Claude Desktop/Cowork.
@@ -28,7 +29,7 @@ session there, not this one.
 
 Content that doesn't depend on auditing the live machine — drafted and
 checked against the current docs (`code.claude.com/docs/en/memory`,
-`.../settings`, `.../permissions`) as of 2026-09-02:
+`.../settings`, `.../permissions`) on 2026-09-02 and re-checked 2026-09-09:
 
 - `claude-global/CLAUDE.md` — draft for `~/.claude/CLAUDE.md`
 - `claude-global/rules/*.md` — draft for `~/.claude/rules/`
