@@ -24,7 +24,11 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPLY=0
-[ "${1:-}" = "--apply" ] && APPLY=1
+case "${1:-}" in
+    "") ;;
+    --apply) APPLY=1 ;;
+    *) printf 'Unknown argument: %s\nUsage: bash apply.sh [--apply]\n' "$1" >&2; exit 2 ;;
+esac
 
 CLAUDE_HOME="$HOME/.claude"
 PROJ_ROOT="$HOME/claude"
@@ -34,7 +38,7 @@ BACKUP="$CLAUDE_HOME/backup-$STAMP"
 say()  { printf '%s\n' "$*"; }
 plan() { if [ "$APPLY" -eq 1 ]; then printf '  doing: %s\n' "$*"; else printf '  would: %s\n' "$*"; fi; }
 
-# Sanity: refuse to run from inside the sandbox this was written in, or as root.
+# Sanity: never as root (files would end up root-owned in the wrong home).
 if [ "$(id -u)" -eq 0 ]; then
     say "Refusing to run as root. Run as the user who owns ~/claude."; exit 1
 fi
