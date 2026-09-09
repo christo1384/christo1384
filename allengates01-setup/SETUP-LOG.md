@@ -144,3 +144,19 @@ say so and ask for a `sudo` re-run rather than guessing.
   15 GB RAM with no headroom and the list of what runs, the `~/ai-stack`
   compose project and n8n URL, where its secrets live, the vault helpers,
   and the Brain Hub sync folder.
+- `backup/` — the fix for the backup warning as files: restic to the
+  same `gdrive:` remote, nightly at 03:30 via a user timer, 7/4/6
+  retention, monthly 5% read-data check, offline guard, and a README that
+  insists on the restore test and on storing the repo password off-box.
+- `compose/memory-limits.override.yml` — every known container with
+  `mem_limit` = `memswap_limit` so a runaway service OOM-kills itself
+  instead of swapping the box. Sums to ~15.3 GB with Ollama, ~9.3 GB
+  without; the file says so and says why. Service names must be checked
+  against `docker compose config --services` before use.
+- `PHASE6-skills-mcp.md` — resolves open item 2 as a proposal: the
+  general skills (document tooling, skill-creator, mcp-builder, Chris's
+  deploy/orchestrator patterns) go global on the box; every `sce-*`,
+  `astron-*`, Power Automate and SharePoint skill stays off it under the
+  manifest's "no client data on this box" rule. Also proposes MCP scopes
+  and recommends making `~/claude/` a git repo (open item 3) with project
+  folders ignored, so the box is rebuildable from three clones.

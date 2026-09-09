@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the restic config backup nightly
+
+[Timer]
+# 03:30 local time; nothing else on the box is scheduled then.
+OnCalendar=*-*-* 03:30:00
+# If the box was off at 03:30, run once it is back.
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

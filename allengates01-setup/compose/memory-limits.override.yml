@@ -1,0 +1,60 @@
+# Memory limits for every container on allengates01.
+#
+# Drop this next to the main compose file and include it explicitly:
+#     docker compose -f docker-compose.lite.yml -f memory-limits.override.yml up -d
+# or name it docker-compose.override.yml, which compose picks up on its own.
+#
+# BEFORE USING: the service names below are the ones known from the vault
+# deployment record plus the usual names for the media/HA stack. Run
+#     docker compose config --services
+# and delete or rename any entry that does not match; compose refuses to
+# start if an override names a service the main file lacks.
+#
+# Values are starting points sized for a 15 GB box that has OOM-killed
+# before. Watch `docker stats` for a day and tighten or loosen from there.
+# memswap_limit == mem_limit means the container gets no swap at all; it
+# gets OOM-killed by itself instead of dragging the whole box into swap,
+# which is the behaviour we want.
+
+services:
+  n8n:
+    mem_limit: 1g
+    memswap_limit: 1g
+  sandbox-api:
+    mem_limit: 256m
+    memswap_limit: 256m
+  sandbox-runner-1:
+    mem_limit: 1536m
+    memswap_limit: 1536m
+  jellyfin:
+    mem_limit: 2g
+    memswap_limit: 2g
+  sonarr:
+    mem_limit: 512m
+    memswap_limit: 512m
+  radarr:
+    mem_limit: 512m
+    memswap_limit: 512m
+  prowlarr:
+    mem_limit: 512m
+    memswap_limit: 512m
+  qbittorrent:
+    mem_limit: 1g
+    memswap_limit: 1g
+  homeassistant:
+    mem_limit: 1g
+    memswap_limit: 1g
+  # Ollama only earns this if something still calls it. The n8n AI
+  # Assistant moved to OpenRouter, so the default here is generous but the
+  # recommendation in REMEDIATION.md is to stop it unless used.
+  ollama:
+    mem_limit: 6g
+    memswap_limit: 6g
+  open-webui:
+    mem_limit: 1g
+    memswap_limit: 1g
+
+# Sum of the above if everything runs: ~15.3 GB, which is the whole box.
+# That is the point: with Ollama stopped the total drops to ~9.3 GB and
+# leaves 5 GB for the host, page cache and Samba. Do not add a service
+# without taking its limit out of something else.

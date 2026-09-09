@@ -49,6 +49,12 @@ checked against the current docs (`code.claude.com/docs/en/memory`,
   steps for the Google Drive mirror
 - `verify.sh` — Phase 9: PASS/FAIL checklist for everything above; exits
   non-zero until clean
+- `backup/` — nightly restic-to-Drive user unit and timer, with the
+  restore test that proves it works
+- `compose/memory-limits.override.yml` — a memory limit for every
+  container, sized so the box cannot be pushed into swap again
+- `PHASE6-skills-mcp.md` — proposed global vs Steelcraft-only skill split
+  (client-data rule), MCP server scopes, and the open decisions
 
 ## How Chris applies this
 
