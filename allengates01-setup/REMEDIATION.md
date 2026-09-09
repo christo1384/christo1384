@@ -157,7 +157,7 @@ Keep the current session open and test a fresh login before closing it.
 
 **`no ~/.ssh/authorized_keys`**
 
-From the Mac or Windows PC: `ssh-copy-id chris@allengates01` (or paste the
+From the Mac or Windows PC: `ssh-copy-id <your-user>@allengates01` (or paste the
 public key into `~/.ssh/authorized_keys`, mode 600, directory mode 700).
 Do this before the step above.
 
@@ -188,7 +188,7 @@ see which process owns it.
 
 Set `guest ok = no` on the share and `map to guest = never` in `[global]`,
 then `sudo systemctl reload smbd`. The Windows PC and Mac should connect
-with a Samba user (`sudo smbpasswd -a chris`).
+with a Samba user (`sudo smbpasswd -a <your-user>`).
 
 **`server min protocol is unset`**
 
@@ -205,22 +205,16 @@ In `[global]`: `server min protocol = SMB2`. SMB1 has no business on a
 **`no backup timer or cron job found`**
 
 What needs protecting is small: compose files, `.env` files, Home
-Assistant config, Samba config, and the vault (already in git). A restic
-repository on the Mac share or in Google Drive via rclone covers it. The
-`brain-hub-sync/` folder in this repo has the rclone user-timer template;
-the same pattern with `restic backup` in place of `rclone sync` gives a
-nightly backup. Minimum viable version:
+Assistant config, Samba config, and the vault (already in git). The
+`backup/` folder in this repo has the complete answer: a restic
+repository in Google Drive via the same `gdrive:` rclone remote, a nightly
+user timer, retention, and the restore test. Follow `backup/README.md`.
 
-```bash
-sudo apt install restic
-restic -r rclone:gdrive:backups/allengates01 init
-restic -r rclone:gdrive:backups/allengates01 backup \
-    ~/ai-stack ~/homeassistant /etc/samba /etc/fstab ~/.config/rclone
-```
+Do this **before** the fstab, memory and SSH changes below, so every one
+of them is made on a box that can be put back.
 
-Then prove it restores: `restic restore latest --target /tmp/restore-test`
-and diff one file. A backup nobody has restored from is a hope, not a
-backup.
+A backup nobody has restored from is a hope, not a backup. The README's
+restore test is not optional.
 
 ## Secrets
 

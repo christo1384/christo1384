@@ -172,3 +172,13 @@ say so and ask for a `sudo` re-run rather than guessing.
   and a README with the init steps and the three-clone rebuild. Verified
   against the scaffolded test home: only `MANIFEST.md` and `.gitignore`
   are tracked.
+- `RUNBOOK.md` — one ordered checklist across every file in the folder:
+  Session 1 read-only audits, Session 2 box standard (backups first, then
+  fstab, memory, secrets, SSH, firewall, Samba, patches), Session 3 Claude
+  Code apply/init/verify, Session 4 sync, skills, MCP, Cowork. Ends with
+  the four decisions still needed and the definition of done.
+- `REMEDIATION.md` backup section now points at `backup/` instead of
+  describing a minimal version by hand, and says to do backups before the
+  riskier fixes. Removed a guessed username from two commands.
+- `apply.sh` rejects unknown arguments (a mistyped `--apply` used to fall
+  through to a silent dry run).

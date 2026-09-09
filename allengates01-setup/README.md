@@ -56,13 +56,16 @@ checked against the current docs (`code.claude.com/docs/en/memory`,
   container, sized so the box cannot be pushed into swap again
 - `PHASE6-skills-mcp.md` — proposed global vs Steelcraft-only skill split
   (client-data rule), MCP server scopes, and the open decisions
+- `RUNBOOK.md` — the one ordered checklist across all of the above, in
+  four sessions, with the decisions still needed and the definition of done
 - `claude-repo/` — open item 3: how to make `~/claude` a git repo that
   tracks the config and ignores every project folder, plus the rebuild-
   from-three-clones procedure
 
 ## How Chris applies this
 
-On `allengates01`, in a real Claude Code (or Cowork) session:
+**Start with `RUNBOOK.md`** — it is the single ordered checklist across
+every file here, split into four sessions. The short version:
 
 1. Run `bash audit.sh` (read-only) and compare its output against what's
    here — it covers the Phase 0 checks from the plan.
