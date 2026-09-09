@@ -47,6 +47,8 @@ checked against the current docs (`code.claude.com/docs/en/memory`,
   Backs up anything it overwrites, never deletes, refuses to run as root
 - `brain-hub-sync/` — Phase 8: rclone user-timer templates and the setup
   steps for the Google Drive mirror
+- `verify.sh` — Phase 9: PASS/FAIL checklist for everything above; exits
+  non-zero until clean
 
 ## How Chris applies this
 
@@ -63,7 +65,8 @@ On `allengates01`, in a real Claude Code (or Cowork) session:
 4. `claude doctor`, then `/init` in each project folder to fill in its
    `CLAUDE.md`.
 5. Follow `brain-hub-sync/README.md` for the rclone mirror (Phase 8), then
-   Phases 5–7 and 9 (skills, MCP, Cowork test, verification checklist).
+   Phases 5–7 (skills, MCP, Cowork test).
+6. `bash verify.sh` until every automated check passes.
 
 Everything here is a draft for Chris to read, edit, and approve before it
 touches the live machine — nothing in this folder has been installed

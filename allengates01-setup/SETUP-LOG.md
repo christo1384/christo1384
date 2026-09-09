@@ -129,3 +129,18 @@ say so and ask for a `sudo` re-run rather than guessing.
   with no `mem_limit`, privileged flag, and ports bound on all interfaces —
   useful when the docker socket is not readable as the normal user. Both
   audit scripts are shellcheck-clean.
+- `verify.sh` — Phase 9 as a script: binary and install method,
+  `~/.claude/` files present, real (not symlinked) and valid, the rm deny
+  rule in place, every manifest project folder present with a CLAUDE.md
+  (warns while it is still the untouched template), `brain-hub-sync/`
+  present and owned correctly, rclone remote + timer + linger state, and a
+  reminder of the manual Cowork check. Exits non-zero until clean. Passed
+  against the test home that `apply.sh` built.
+- `rules/safety.md` now matches the settings.json deny list (recursive
+  deletes blocked outright, no workarounds via find/xargs) and adds two
+  rules learned from the n8n deployment: never echo secrets into chat, and
+  ask before starting containers on a box that has already OOM-killed.
+- `rules/machine.md` now carries the facts a session on the box needs:
+  15 GB RAM with no headroom and the list of what runs, the `~/ai-stack`
+  compose project and n8n URL, where its secrets live, the vault helpers,
+  and the Brain Hub sync folder.
