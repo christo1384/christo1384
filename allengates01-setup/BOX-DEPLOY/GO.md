@@ -10,7 +10,7 @@ the status reads UNSIGNED.
 | READ | Read-only commands and the audit scripts. Output goes to `evidence/`. |
 | FILE-WRITE | Files under `$HOME` only: `~/.claude/`, `~/claude/`, `~/backups/`, `~/.config/systemd/user/`, `~/.config/restic/`, and permission changes (`chmod 600`) on `~/*/.env` and `~/.config/rclone/rclone.conf`. Always with a snapshot. |
 | PKG-INSTALL | `sudo apt install` of exactly: `restic`, `unattended-upgrades`, `apt-listchanges`, `ufw`, `python3-yaml`, `smartmontools`. Nothing else. |
-| SYS-CONFIG | New files under `/etc/sysctl.d/`, `/etc/apt/apt.conf.d/`, `/etc/ssh/sshd_config.d/`. Never edits to existing files elsewhere in `/etc`. |
+| SYS-CONFIG | New or replaced drop-in files under `/etc/sysctl.d/`, `/etc/apt/apt.conf.d/`, `/etc/ssh/sshd_config.d/` only, with the previous file snapshotted first. Nothing else under `/etc` is touched. |
 | COMPOSE-WRITE | Write `memory-limits.override.yml` next to the compose file and validate with `docker compose config`. No containers touched. |
 | COMPOSE-APPLY | `docker compose up -d <service>` per named service to apply memory limits. Containers restart one at a time. Never `down`. |
 | SERVICE-USER | `systemctl --user` enable/start of the restic and rclone units, `loginctl enable-linger`. |
