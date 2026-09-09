@@ -19,7 +19,9 @@
       "Bash(python3 -m venv *)"
     ],
     "deny": [
-      "Bash(rm -rf /*)",
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(rm -r *)",
       "Bash(sudo rm *)",
       "Bash(git push --force *)",
       "Read(~/.ssh/**)",

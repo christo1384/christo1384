@@ -36,12 +36,14 @@ checked against the current docs (`code.claude.com/docs/en/memory`,
 - `project-template/` — the per-project skeleton from Phase 2 (`CLAUDE.md`,
   `.claude/`, `.gitignore`)
 - `SETUP-LOG.md` — what was checked, what was drafted, what's still open
+- `audit.sh` — read-only Phase 0 audit to run on the box first
 
 ## How Chris applies this
 
 On `allengates01`, in a real Claude Code (or Cowork) session:
 
-1. Run the Phase 0 audit commands for real and compare against what's here.
+1. Run `bash audit.sh` (read-only) and compare its output against what's
+   here — it covers the Phase 0 checks from the plan.
 2. Copy `claude-global/CLAUDE.md` to `~/.claude/CLAUDE.md` **as a real file,
    not a symlink** (Cowork skips symlinked user-scope files).
 3. Copy `claude-global/rules/` to `~/.claude/rules/`.

@@ -61,3 +61,32 @@ they're not lost):
 `~/claude/`). That session can do the real Phase 0 audit, compare it
 against the drafts in `allengates01-setup/`, and carry the plan through
 Phases 1–9 for real.
+
+## 2026-09-09 — second pass, still from a cloud session
+
+**What was asked**: check the box's setup state.
+
+**What was found**: nothing from the 2026-09-02 pass had been applied yet —
+every phase that needs the machine is still open, and this session still
+cannot reach `allengates01`. Reviewed the drafts against the current docs
+instead (settings reference, permissions, memory). Every key and rule in
+`settings.json` is valid as written. One weak spot fixed:
+
+- `Bash(rm -rf /*)` only blocked that exact argument shape; the permissions
+  docs warn that argument-constraining Bash patterns are fragile. Replaced
+  with blanket denies on `rm -rf *`, `rm -fr *` and `rm -r *`. Trade-off:
+  Claude Code can no longer recursive-delete anywhere, project folder
+  included — Chris does those by hand. That matches the intent of
+  `rules/safety.md` better than the old rule did.
+
+**Added**: `audit.sh` — the Phase 0 audit as a read-only script, so the
+on-box session (or Chris in a plain terminal) can run it once and paste the
+output, rather than re-deriving the audit commands from the plan. It reports
+OS/RAM/swap, tool versions and install method for `claude`, what already
+exists under `~/.claude/` (including whether `CLAUDE.md` is a symlink, which
+Cowork skips), `~/claude/` layout, Claude Desktop presence, rclone remotes
+and timers, fstab parse state, and the n8n/sandbox containers from the vault
+deployment record. It changes nothing.
+
+**Still open**: everything listed under "Still fully open" above. Next step
+is unchanged — run `audit.sh` on `allengates01`, compare, then apply.
