@@ -90,3 +90,18 @@ deployment record. It changes nothing.
 
 **Still open**: everything listed under "Still fully open" above. Next step
 is unchanged — run `audit.sh` on `allengates01`, compare, then apply.
+
+**Added (same day)**: `system-audit.sh` — the box-hygiene half of "get the
+box to a good standard", as a read-only script. The setup plan only ever
+covered Claude Code; the box also runs Docker (n8n + privileged sandbox
+runner, Jellyfin, the *arr stack, Home Assistant, Ollama), Samba to two
+other machines, and has already OOM-killed twice on 15 GB with heavy swap.
+The script flags: pending patches and whether unattended-upgrades is on,
+fstab parse state and network mounts without `nofail`, swap pressure and
+kernel OOM events in the last 30 days, containers with no memory limit or
+running privileged, ports published on 0.0.0.0, sshd password/root login,
+ufw state and services listening on all interfaces, Samba guest access and
+min protocol, presence of any backup timer/cron, secrets in shell history
+and compose files, `.env` and rclone.conf modes, and disk usage. Every
+`[WARN]` line is a to-do for the system-standard session. Root-only checks
+say so and ask for a `sudo` re-run rather than guessing.

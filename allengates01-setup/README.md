@@ -37,6 +37,9 @@ checked against the current docs (`code.claude.com/docs/en/memory`,
   `.claude/`, `.gitignore`)
 - `SETUP-LOG.md` — what was checked, what was drafted, what's still open
 - `audit.sh` — read-only Phase 0 audit to run on the box first
+- `system-audit.sh` — read-only box-hygiene audit (patches, fstab, memory,
+  Docker limits, SSH, firewall, Samba, backups, secrets, disk); run once as
+  your user and once with `sudo`, then work the `[WARN]` lines
 
 ## How Chris applies this
 
