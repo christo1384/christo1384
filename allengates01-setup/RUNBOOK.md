@@ -4,6 +4,10 @@ One ordered checklist across every file in this folder. Tick as you go.
 Estimated time: one evening for the box work, another for the Claude
 Code phases. Each step names the file that has the detail.
 
+**Away from the box?** `BOX-DEPLOY/KICKOFF-ALLENGATES01.md` runs Sessions
+1–3 unattended through a gated ticket queue, and stages the rest for you.
+This runbook is the by-hand equivalent.
+
 Start on the box, in a terminal, as your own user:
 
 ```bash

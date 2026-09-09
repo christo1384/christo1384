@@ -60,14 +60,23 @@ checked against the current docs (`code.claude.com/docs/en/memory`,
   (client-data rule), MCP server scopes, and the open decisions
 - `RUNBOOK.md` — the one ordered checklist across all of the above, in
   four sessions, with the decisions still needed and the definition of done
+- `BOX-DEPLOY/` — the unattended alternative: contract, ticket queue, GO
+  gate, overwatch inbox, driver loop, kick-off guide
 - `claude-repo/` — open item 3: how to make `~/claude` a git repo that
   tracks the config and ignores every project folder, plus the rebuild-
   from-three-clones procedure
 
-## How Chris applies this
+## Two ways to apply this
 
-**Start with `RUNBOOK.md`** — it is the single ordered checklist across
-every file here, split into four sessions. The short version:
+**Unattended (Chris away): `BOX-DEPLOY/`.** Your AFK deploy pattern for
+this box: a gated ticket queue, a one-page contract, a driver loop that
+runs `claude -p` one ticket per cycle, and an overwatch inbox. Ten minutes
+of setup in `BOX-DEPLOY/KICKOFF-ALLENGATES01.md`, then 17 tickets run on
+their own and push reports back to this branch. Nothing is written until
+`GO.md` is signed and pushed.
+
+**By hand: `RUNBOOK.md`** — the same work as an ordered checklist in four
+sessions. The short version:
 
 1. Run `bash audit.sh` (read-only) and compare its output against what's
    here — it covers the Phase 0 checks from the plan.

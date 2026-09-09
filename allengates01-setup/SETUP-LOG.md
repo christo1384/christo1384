@@ -182,3 +182,22 @@ say so and ask for a `sudo` re-run rather than guessing.
   riskier fixes. Removed a guessed username from two commands.
 - `apply.sh` rejects unknown arguments (a mistyped `--apply` used to fall
   through to a silent dry run).
+
+**08:45 NZT — Chris is AFK and wants maximum progress without him**
+- Built `BOX-DEPLOY/` from Chris's AFK deploy pattern (afk-deploy-system
+  skill; the reference repo could not be attached from this session, so
+  the files follow the skill's spec rather than being copied): 3-line
+  `CLAUDE.md`, `WORK-CLAUDE.md` contract (only-context rule, one-ticket
+  cycle, snapshot-before-write, standing rulings, hard guardrails, 40-line
+  report format), `QUEUE.md` with 17 tickets in phases A evidence → B
+  safety net → C home-scope config → D system changes, plus a staged
+  Needs-Chris table with the evidence file for each, `GO.md` with ten
+  write classes and an UNSIGNED status, `OVERWATCH.md` inbox,
+  `run-cycle.sh` driver (pull, STOP/SIGNED/ready checks, sudo keepalive,
+  one ticket per `claude -p`, sweep commit, push, sleep; `--dry-run` and
+  `--max-cycles`), and `KICKOFF-ALLENGATES01.md`.
+- What this changes: Chris's part drops to install/login, clone, sign GO,
+  run the loop. Overwatch from this session reads the reports through git
+  on each scheduled wake and answers through `OVERWATCH.md`.
+- Deliberately kept out of the agent's reach: fstab, Samba, secrets,
+  Drive login, reboot, stopping Ollama, any deletion.
