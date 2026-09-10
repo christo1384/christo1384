@@ -1,0 +1,32 @@
+[Unit]
+Description=Mirror ~/claude/brain-hub-sync to the Brain Hub in Google Drive
+# Do not start until the network is actually up; the ExecCondition below also guards this.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Only the sync folder and the rclone config are touched.
+Environment=SRC=%h/claude/brain-hub-sync
+Environment="DST=gdrive:Brain Hub/allengates01"
+Environment="ARCHIVE=gdrive:Brain Hub/allengates01-archive"
+# Skip quietly if the remote is unreachable (offline box, expired token).
+ExecCondition=/usr/bin/rclone lsd gdrive: --max-depth 1 --retries 1 --low-level-retries 2 --timeout 20s
+# One-way mirror, local wins. Deleted/overwritten remote files are kept for
+# 30 days under ARCHIVE/<date>/ so a bad sync is recoverable.
+# To rehearse: add --dry-run after "sync", start the service, read the journal.
+# (%% is a literal % to systemd; the shell sees date +%F.)
+ExecStart=/bin/sh -c 'exec /usr/bin/rclone sync "$SRC" "$DST" --backup-dir "$ARCHIVE/$(date +%%F)" --exclude ".git/**" --exclude "*.tmp" --exclude ".DS_Store" --fast-list --transfers 4 --checkers 8 --log-level NOTICE'
+# Prune archive folders older than 30 days.
+ExecStartPost=/usr/bin/rclone delete "${ARCHIVE}" --min-age 30d --rmdirs
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=yes
+
+# Optional hardening. Needs unprivileged user namespaces, which Debian 13
+# enables by default; if the unit fails with "Failed to set up mount
+# namespacing", comment these four lines out again.
+#ProtectSystem=strict
+#ProtectHome=read-only
+#ReadWritePaths=-%h/.config/rclone -%h/.cache/rclone
+#PrivateTmp=yes

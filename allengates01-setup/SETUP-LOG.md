@@ -1,0 +1,203 @@
+# Setup log — allengates01 Claude Code / Cowork setup
+
+## 2026-09-02 — first pass, from a cloud session
+
+**What was asked**: a full audit-and-setup pass on `allengates01` per the
+9-phase plan Chris wrote (binary install, folder layout, global
+instructions, permissions, skills, MCP, Cowork, Brain Hub rclone sync,
+verification checklist).
+
+**What actually happened**: this session runs in a cloud sandbox against the
+`christo1384/christo1384` GitHub repo, not on `allengates01`. It has no
+filesystem access to that machine, can't run `claude doctor` there, can't
+check installed packages, rclone remotes, or existing `~/claude/` layout on
+it, and can't touch Claude Desktop/Cowork at all. Per the plan's own ground
+rule ("audit before you touch, never assume something isn't installed") and
+its instruction to stop and report before Phase 1, none of Phase 0 could be
+run honestly from here — so it wasn't run, and nothing was installed or
+changed on any real machine.
+
+**What was done instead** (see `allengates01-setup/` in this repo):
+- Verified the settings.json and CLAUDE.md content in the plan against the
+  live docs (`code.claude.com/docs/en/memory`, `.../settings`,
+  `.../permissions`), 2026-09-02. Two corrections from the plan's own draft:
+  - `Bash(git status*)` → `Bash(git status *)` (space before the trailing
+    `*` — without the space, a bare `git status` with no arguments isn't
+    guaranteed to match the same way; the docs' own examples all use the
+    space form). Applied the same fix to the other `Bash(...)` allow rules.
+  - Confirmed the Cowork symlink behaviour Phase 3/7 describes is accurate
+    as of the current docs: Cowork skips a `~/.claude/CLAUDE.md` that is
+    itself a symlink or hard link, and skips imports/rules that resolve
+    outside the session's working folder.
+- Drafted `claude-global/CLAUDE.md`, `claude-global/rules/*.md`,
+  `claude-global/settings.json` — ready to review and copy onto the machine.
+- Drafted `project-template/` (CLAUDE.md skeleton, `.gitignore`,
+  `.claude/skills/`) for Phase 2/5.
+- Drafted `MANIFEST-template.md` with the six known projects from the plan.
+
+**Still fully open** (needs a session running on `allengates01` itself):
+- Phase 0 audit (all of it — `claude`, `claude doctor`, existing
+  `~/.claude/`, npm vs native install, node/git/gh/python3/rclone, existing
+  project folders, Claude Desktop/Cowork presence).
+- Phase 1 (binary install/login), Phase 2 (creating `~/claude/` for real —
+  don't duplicate whatever Phase 0 finds), Phase 5 (per-project `/init` +
+  trim), Phase 6 (skills export/import, MCP `claude mcp add`), Phase 7
+  (Cowork working-folder test), Phase 8 (rclone config + systemd timer),
+  Phase 9 (the full verification checklist).
+
+**Open items for Chris to decide** (unchanged from the plan, listed here so
+they're not lost):
+1. API-key billing for Claude Code, or subscription login?
+2. Which custom skills should be global vs Steelcraft-only?
+3. Should `~/claude/` itself be a git repo (config backup), excluding
+   project folders?
+4. fstab parse error / read-only Mac share — confirmed separate job, not
+   touched here.
+5. OpenClaw Phase 1 (token rotation) — confirmed separate job, not touched
+   here.
+
+**Next step**: run this plan again in a Claude Code session started on
+`allengates01` itself (terminal `claude`, or a Cowork session pointed at
+`~/claude/`). That session can do the real Phase 0 audit, compare it
+against the drafts in `allengates01-setup/`, and carry the plan through
+Phases 1–9 for real.
+
+## 2026-09-09 — second pass, still from a cloud session
+
+**What was asked**: check the box's setup state.
+
+**What was found**: nothing from the 2026-09-02 pass had been applied yet —
+every phase that needs the machine is still open, and this session still
+cannot reach `allengates01`. Reviewed the drafts against the current docs
+instead (settings reference, permissions, memory). Every key and rule in
+`settings.json` is valid as written. One weak spot fixed:
+
+- `Bash(rm -rf /*)` only blocked that exact argument shape; the permissions
+  docs warn that argument-constraining Bash patterns are fragile. Replaced
+  with blanket denies on `rm -rf *`, `rm -fr *` and `rm -r *`. Trade-off:
+  Claude Code can no longer recursive-delete anywhere, project folder
+  included — Chris does those by hand. That matches the intent of
+  `rules/safety.md` better than the old rule did.
+
+**Added**: `audit.sh` — the Phase 0 audit as a read-only script, so the
+on-box session (or Chris in a plain terminal) can run it once and paste the
+output, rather than re-deriving the audit commands from the plan. It reports
+OS/RAM/swap, tool versions and install method for `claude`, what already
+exists under `~/.claude/` (including whether `CLAUDE.md` is a symlink, which
+Cowork skips), `~/claude/` layout, Claude Desktop presence, rclone remotes
+and timers, fstab parse state, and the n8n/sandbox containers from the vault
+deployment record. It changes nothing.
+
+**Still open**: everything listed under "Still fully open" above. Next step
+is unchanged — run `audit.sh` on `allengates01`, compare, then apply.
+
+**Added (same day)**: `system-audit.sh` — the box-hygiene half of "get the
+box to a good standard", as a read-only script. The setup plan only ever
+covered Claude Code; the box also runs Docker (n8n + privileged sandbox
+runner, Jellyfin, the *arr stack, Home Assistant, Ollama), Samba to two
+other machines, and has already OOM-killed twice on 15 GB with heavy swap.
+The script flags: pending patches and whether unattended-upgrades is on,
+fstab parse state and network mounts without `nofail`, swap pressure and
+kernel OOM events in the last 30 days, containers with no memory limit or
+running privileged, ports published on 0.0.0.0, sshd password/root login,
+ufw state and services listening on all interfaces, Samba guest access and
+min protocol, presence of any backup timer/cron, secrets in shell history
+and compose files, `.env` and rclone.conf modes, and disk usage. Every
+`[WARN]` line is a to-do for the system-standard session. Root-only checks
+say so and ask for a `sudo` re-run rather than guessing.
+
+**Added (2026-09-10 NZT, still from the cloud session)**:
+- `REMEDIATION.md` — one fix per `[WARN]` the system audit can raise, with
+  the reasoning and the order to do them (fstab first, then memory limits,
+  then SSH/firewall, then backups). Includes a starting memory-limit table
+  for the box's containers and the "stop Ollama if nothing uses it" call.
+- `apply.sh` — Phase 2/3/4 made repeatable. Dry run by default, `--apply`
+  to execute. Backs up existing `~/.claude/` files to a timestamped folder,
+  replaces a symlinked `CLAUDE.md` with a real file, copies unchanged files
+  as no-ops, scaffolds `~/claude/` project folders from the manifest table
+  and seeds each NEW one from `project-template/`. Never overwrites an
+  existing project folder or `MANIFEST.md`, never deletes, refuses root.
+  Tested as a non-root user in the sandbox: dry run, apply, re-apply with
+  a symlinked `CLAUDE.md` in place — all behaved as documented.
+- `brain-hub-sync/` — Phase 8 as files: a user-scope systemd service and
+  15-minute timer for `rclone sync` local → Drive, with `--backup-dir` so
+  overwritten/deleted files survive 30 days, an `ExecCondition` that skips
+  the run when Drive is unreachable, and a README covering rclone login,
+  install, linger, and the one-way-mirror caveat. Unit files pass
+  `systemd-analyze verify` apart from rclone not existing in the sandbox.
+- `system-audit.sh` now also statically checks compose files for services
+  with no `mem_limit`, privileged flag, and ports bound on all interfaces —
+  useful when the docker socket is not readable as the normal user. Both
+  audit scripts are shellcheck-clean.
+- `verify.sh` — Phase 9 as a script: binary and install method,
+  `~/.claude/` files present, real (not symlinked) and valid, the rm deny
+  rule in place, every manifest project folder present with a CLAUDE.md
+  (warns while it is still the untouched template), `brain-hub-sync/`
+  present and owned correctly, rclone remote + timer + linger state, and a
+  reminder of the manual Cowork check. Exits non-zero until clean. Passed
+  against the test home that `apply.sh` built.
+- `rules/safety.md` now matches the settings.json deny list (recursive
+  deletes blocked outright, no workarounds via find/xargs) and adds two
+  rules learned from the n8n deployment: never echo secrets into chat, and
+  ask before starting containers on a box that has already OOM-killed.
+- `rules/machine.md` now carries the facts a session on the box needs:
+  15 GB RAM with no headroom and the list of what runs, the `~/ai-stack`
+  compose project and n8n URL, where its secrets live, the vault helpers,
+  and the Brain Hub sync folder.
+- `backup/` — the fix for the backup warning as files: restic to the
+  same `gdrive:` remote, nightly at 03:30 via a user timer, 7/4/6
+  retention, monthly 5% read-data check, offline guard, and a README that
+  insists on the restore test and on storing the repo password off-box.
+- `compose/memory-limits.override.yml` — every known container with
+  `mem_limit` = `memswap_limit` so a runaway service OOM-kills itself
+  instead of swapping the box. Sums to ~15.3 GB with Ollama, ~9.3 GB
+  without; the file says so and says why. Service names must be checked
+  against `docker compose config --services` before use.
+- `PHASE6-skills-mcp.md` — resolves open item 2 as a proposal: the
+  general skills (document tooling, skill-creator, mcp-builder, Chris's
+  deploy/orchestrator patterns) go global on the box; every `sce-*`,
+  `astron-*`, Power Automate and SharePoint skill stays off it under the
+  manifest's "no client data on this box" rule. Also proposes MCP scopes
+  and recommends making `~/claude/` a git repo (open item 3) with project
+  folders ignored, so the box is rebuildable from three clones.
+
+**08:30 NZT pass**
+- Fixture test of `system-audit.sh` (a fake `~/ai-stack` with a compose
+  file, a 644 `.env` and a key in shell history) found the compose and
+  `.env` checks printing every finding twice: two overlapping globs. Fixed;
+  every branch of those sections is now exercised by the test.
+- `claude-repo/` — open item 3 answered as a template: a `.gitignore`
+  that tracks `MANIFEST.md` and shared skills while ignoring every
+  manifest project folder, `brain-hub-sync/`, nested repos and secrets,
+  and a README with the init steps and the three-clone rebuild. Verified
+  against the scaffolded test home: only `MANIFEST.md` and `.gitignore`
+  are tracked.
+- `RUNBOOK.md` — one ordered checklist across every file in the folder:
+  Session 1 read-only audits, Session 2 box standard (backups first, then
+  fstab, memory, secrets, SSH, firewall, Samba, patches), Session 3 Claude
+  Code apply/init/verify, Session 4 sync, skills, MCP, Cowork. Ends with
+  the four decisions still needed and the definition of done.
+- `REMEDIATION.md` backup section now points at `backup/` instead of
+  describing a minimal version by hand, and says to do backups before the
+  riskier fixes. Removed a guessed username from two commands.
+- `apply.sh` rejects unknown arguments (a mistyped `--apply` used to fall
+  through to a silent dry run).
+
+**08:45 NZT — Chris is AFK and wants maximum progress without him**
+- Built `BOX-DEPLOY/` from Chris's AFK deploy pattern (afk-deploy-system
+  skill; the reference repo could not be attached from this session, so
+  the files follow the skill's spec rather than being copied): 3-line
+  `CLAUDE.md`, `WORK-CLAUDE.md` contract (only-context rule, one-ticket
+  cycle, snapshot-before-write, standing rulings, hard guardrails, 40-line
+  report format), `QUEUE.md` with 17 tickets in phases A evidence → B
+  safety net → C home-scope config → D system changes, plus a staged
+  Needs-Chris table with the evidence file for each, `GO.md` with ten
+  write classes and an UNSIGNED status, `OVERWATCH.md` inbox,
+  `run-cycle.sh` driver (pull, STOP/SIGNED/ready checks, sudo keepalive,
+  one ticket per `claude -p`, sweep commit, push, sleep; `--dry-run` and
+  `--max-cycles`), and `KICKOFF-ALLENGATES01.md`.
+- What this changes: Chris's part drops to install/login, clone, sign GO,
+  run the loop. Overwatch from this session reads the reports through git
+  on each scheduled wake and answers through `OVERWATCH.md`.
+- Deliberately kept out of the agent's reach: fstab, Samba, secrets,
+  Drive login, reboot, stopping Ollama, any deletion.

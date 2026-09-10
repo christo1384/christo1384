@@ -1,0 +1,22 @@
+[Unit]
+Description=Nightly restic backup of config to Google Drive
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=RESTIC_REPOSITORY=rclone:gdrive:backups/allengates01
+Environment=RESTIC_PASSWORD_FILE=%h/.config/restic/password
+Environment=RESTIC_CACHE_DIR=%h/.cache/restic
+# Edit to match what exists on the box. restic fails on a missing path.
+Environment="BACKUP_PATHS=%h/ai-stack %h/homeassistant %h/claude %h/.config/rclone /etc/samba /etc/fstab /etc/ssh/sshd_config.d"
+# Skip quietly if Drive is unreachable.
+ExecCondition=/usr/bin/rclone lsd gdrive: --max-depth 1 --retries 1 --low-level-retries 2 --timeout 20s
+# Word-splitting BACKUP_PATHS is intentional (no spaces in these paths).
+ExecStart=/bin/sh -c 'exec /usr/bin/restic backup $BACKUP_PATHS --exclude-caches --exclude "**/node_modules" --exclude "**/.venv" --exclude "**/__pycache__" --one-file-system --tag nightly'
+ExecStartPost=/usr/bin/restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+# Verify a random 5% of pack data monthly-ish; cheap and catches silent Drive corruption.
+ExecStartPost=/bin/sh -c '[ "$(date +%%d)" = "01" ] && exec /usr/bin/restic check --read-data-subset=5%% || exit 0'
+Nice=15
+IOSchedulingClass=idle
+NoNewPrivileges=yes

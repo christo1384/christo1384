@@ -1,0 +1,32 @@
+{
+  "model": "sonnet",
+  "autoMemoryEnabled": true,
+  "cleanupPeriodDays": 60,
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(grep *)",
+      "Bash(python3 -m pytest *)",
+      "Bash(python3 -m venv *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(rm -r *)",
+      "Bash(sudo rm *)",
+      "Bash(git push --force *)",
+      "Read(~/.ssh/**)",
+      "Read(~/.config/rclone/**)",
+      "Read(**/.env)"
+    ]
+  }
+}
