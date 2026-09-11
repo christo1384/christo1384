@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Contracting Ops</title>
+<link rel="stylesheet" href="/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>&#128296;</text></svg>">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#/dashboard"><span class="brand-mark">&#128296;</span> Contracting Ops</a>
+    <nav class="tabs">
+      <a href="#/dashboard" data-tab="dashboard">Dashboard</a>
+      <a href="#/jobs" data-tab="jobs">Jobs</a>
+      <a href="#/clients" data-tab="clients">Clients</a>
+    </nav>
+    <button class="btn btn-primary" id="new-job-btn" type="button">New job</button>
+  </div>
+</header>
+
+<main id="view" class="view" aria-live="polite"></main>
+
+<dialog id="modal" class="modal">
+  <form method="dialog" id="modal-form">
+    <h2 id="modal-title"></h2>
+    <div id="modal-fields"></div>
+    <p class="form-error" id="modal-error" hidden></p>
+    <menu class="modal-actions">
+      <button class="btn" value="cancel" type="submit" formnovalidate>Cancel</button>
+      <button class="btn btn-primary" id="modal-save" value="save" type="button">Save</button>
+    </menu>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="/app.js" type="module"></script>
+</body>
+</html>
