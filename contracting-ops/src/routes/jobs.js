@@ -1,6 +1,6 @@
 import { sendJson, readJson, notFound, badRequest } from '../lib/http.js';
 import {
-  requiredText, optionalText, optionalEnum, optionalDate, optionalId, pathId, buildPatch,
+  requiredText, optionalText, optionalEnum, requiredEnum, optionalDate, optionalId, pathId, buildPatch,
 } from '../lib/validate.js';
 import { transaction } from '../db.js';
 import {
@@ -53,7 +53,7 @@ export function registerJobRoutes(router, db) {
     sendJson(res, 200, rows.map(decorate));
   });
 
-  router.post('/api/jobs', async (req, res) => {
+  router.post('/api/jobs', async (req, res, { user }) => {
     const body = await readJson(req);
     const title = requiredText(body, 'title', { max: 200 });
     const clientId = optionalId(body, 'client_id') ?? null;
@@ -80,7 +80,7 @@ export function registerJobRoutes(router, db) {
       db.prepare('UPDATE jobs SET job_number = ? WHERE id = ?').run(`J-${String(id).padStart(4, '0')}`, id);
       db.prepare(
         `INSERT INTO job_events (job_id, kind, to_status, body, author) VALUES (?, 'created', ?, ?, ?)`,
-      ).run(id, status, `Job created as ${statusLabel(status)}`, author(body));
+      ).run(id, status, `Job created as ${statusLabel(status)}`, author(body, user));
       return getJob(db, id);
     });
 
@@ -127,14 +127,13 @@ export function registerJobRoutes(router, db) {
     sendJson(res, 200, job);
   });
 
-  router.post('/api/jobs/:id/status', async (req, res, { params }) => {
+  router.post('/api/jobs/:id/status', async (req, res, { params, user }) => {
     const id = pathId(params);
     const existing = getJob(db, id);
     if (!existing) throw notFound('Job not found');
     const body = await readJson(req);
 
-    const to = optionalEnum(body, 'status', STATUS_KEYS);
-    if (to === undefined) throw badRequest('"status" is required');
+    const to = requiredEnum(body, 'status', STATUS_KEYS);
     const from = existing.status;
     if (!canTransition(from, to)) {
       throw badRequest(
@@ -150,7 +149,7 @@ export function registerJobRoutes(router, db) {
       db.prepare(
         `INSERT INTO job_events (job_id, kind, from_status, to_status, body, author)
          VALUES (?, 'status_change', ?, ?, ?, ?)`,
-      ).run(id, from, to, optionalText(body, 'note') ?? null, author(body));
+      ).run(id, from, to, optionalText(body, 'note') ?? null, author(body, user));
       return getJob(db, id);
     });
 
@@ -164,14 +163,14 @@ export function registerJobRoutes(router, db) {
     sendJson(res, 200, listEvents(db, id));
   });
 
-  router.post('/api/jobs/:id/events', async (req, res, { params }) => {
+  router.post('/api/jobs/:id/events', async (req, res, { params, user }) => {
     const id = pathId(params);
     if (!getJob(db, id)) throw notFound('Job not found');
     const body = await readJson(req);
 
     const info = db.prepare(
       `INSERT INTO job_events (job_id, kind, body, author) VALUES (?, 'note', ?, ?)`,
-    ).run(id, requiredText(body, 'body', { max: 5000 }), author(body));
+    ).run(id, requiredText(body, 'body', { max: 5000 }), author(body, user));
     db.prepare("UPDATE jobs SET updated_at = datetime('now') WHERE id = ?").run(id);
 
     sendJson(res, 201, db.prepare('SELECT * FROM job_events WHERE id = ?').get(Number(info.lastInsertRowid)));
@@ -185,9 +184,11 @@ export function registerJobRoutes(router, db) {
   });
 }
 
-function author(body) {
+/** Who gets credit on the timeline: the signed-in user, or an explicit override. */
+function author(body, user) {
   const value = typeof body.author === 'string' ? body.author.trim() : '';
-  return value ? value.slice(0, 100) : null;
+  if (value) return value.slice(0, 100);
+  return user?.display_name ?? null;
 }
 
 export function getJob(db, id) {

@@ -1,7 +1,9 @@
 # Roadmap
 
-Phase 1 is built. This document specifies phases 2–4 in enough detail to build
-them in order: the tables, the endpoints, the screens, and what "done" means.
+Phases 1 and 2 are built. This document specifies phases 3–4 in enough detail
+to build them in order: the tables, the endpoints, the screens, and what "done"
+means. The phase 2 section is kept as a record of what was specified and what
+shipped.
 
 The sequencing rule is that **each phase has to be independently useful**. Phase
 2 is worth running even if phase 3 never gets built. That is what makes it safe
@@ -24,14 +26,18 @@ booked out for months and marketing would be solving a problem it does not have.
 
 ---
 
-## Phase 2 — Financials
+## Phase 2 — Financials (built)
+
+Shipped as migrations `002_auth.sql` and `003_phase2_financials.sql`. The
+prerequisites below were built with it, not after it. What follows is the
+original specification; see the README for what the finished feature does.
 
 Where the money went, per job. This is what turns a job tracker into something
 that answers "did we make anything on that kitchen?"
 
-### Prerequisites (do these first)
+### Prerequisites (done)
 
-Phase 2 stores financial records and uploaded files. Before it goes live:
+Phase 2 stores financial records and uploaded files, so before it went live:
 
 1. **Authentication** — a login with a hashed password and a session cookie.
    `node:crypto`'s `scrypt` is sufficient; no dependency needed.
@@ -40,7 +46,7 @@ Phase 2 stores financial records and uploaded files. Before it goes live:
    `application/pdf`, store outside the web root under a generated filename,
    never the client-supplied one.
 
-### Schema — `002_phase2_financials.sql`
+### Schema — shipped as `003_phase2_financials.sql`
 
 ```sql
 CREATE TABLE vendors (
@@ -122,7 +128,7 @@ CREATE INDEX idx_attachments_owner ON attachments(owner_type, owner_id);
 
 ---
 
-## Phase 3 — Executive and operations
+## Phase 3 — Executive and operations (next)
 
 The functions that were living in his head or in text messages.
 
@@ -196,7 +202,9 @@ CREATE TABLE payments (
 );
 ```
 
-Job photos reuse the phase 2 `attachments` table with `owner_type = 'job'`.
+Job photos reuse the phase 2 `attachments` table with `owner_type = 'job'` —
+the column exists and `storeUpload` already handles the validation, so photos
+are mostly a new route plus a gallery view.
 
 ### Endpoints
 

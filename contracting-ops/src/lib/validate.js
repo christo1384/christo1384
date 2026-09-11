@@ -23,6 +23,8 @@ export function optionalText(body, field, { max = 5000 } = {}) {
 export function optionalEnum(body, field, allowed) {
   if (!(field in body)) return undefined;
   const value = trim(body[field]);
+  // An empty select means "not set", the same as every other optional field.
+  if (value === null || value === '') return null;
   if (!allowed.includes(value)) {
     throw badRequest(`"${field}" must be one of: ${allowed.join(', ')}`, { field, allowed });
   }
@@ -70,4 +72,24 @@ export function buildPatch(fields) {
     values.push(value);
   }
   return { columns, values };
+}
+
+export function requiredEnum(body, field, allowed) {
+  const value = optionalEnum(body, field, allowed);
+  if (value === undefined || value === null) throw badRequest(`"${field}" is required`, { field, allowed });
+  return value;
+}
+
+export function requiredDate(body, field) {
+  const value = optionalDate(body, field);
+  if (value === undefined || value === null) throw badRequest(`"${field}" is required`, { field });
+  return value;
+}
+
+export function optionalBool(body, field) {
+  if (!(field in body)) return undefined;
+  const value = body[field];
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if ([1, 0, '1', '0', 'true', 'false'].includes(value)) return ['1', 1, 'true', true].includes(value) ? 1 : 0;
+  throw badRequest(`"${field}" must be true or false`, { field });
 }

@@ -1,0 +1,10 @@
+[Unit]
+Description=Contracting Ops nightly backup
+
+[Service]
+Type=oneshot
+User=ops
+Group=ops
+WorkingDirectory=/opt/contracting-ops
+ExecStart=/opt/contracting-ops/bin/backup.sh
+Environment=KEEP_DAYS=30

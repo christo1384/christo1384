@@ -64,10 +64,48 @@ const JOBS = [
     track: [] },
 ];
 
+const VENDORS = [
+  { name: 'Buildright Lumber', category: 'lumber' },
+  { name: 'Ace Plumbing Supply', category: 'plumbing' },
+  { name: 'Metro Tool Rental', category: 'rental' },
+  { name: 'County Permits Office', category: 'permits' },
+  { name: 'Delgado Tile & Stone', category: 'subcontractor' },
+];
+
+// Keyed by index into JOBS above.
+const BUDGETS = {
+  0: { contract: 48500, materials: 22000, labor: 16000, other: 3000 },
+  1: { contract: 9200, materials: 4200, labor: 2800, other: 500 },
+  2: { contract: 16400, materials: 8600, labor: 4500, other: 900 },
+};
+
+const EXPENSES = [
+  { job: 0, vendor: 'Buildright Lumber', day: -20, amount: 4318.42, category: 'materials', description: 'Framing lumber and sheathing' },
+  { job: 0, vendor: 'Metro Tool Rental', day: -19, amount: 285.00, category: 'rental', description: 'Dumpster, one week' },
+  { job: 0, vendor: 'County Permits Office', day: -25, amount: 420.00, category: 'permit', method: 'check' },
+  { job: 0, vendor: 'Delgado Tile & Stone', day: -9, amount: 6150.00, category: 'subcontractor', method: 'check', description: 'Backsplash and floor tile' },
+  { job: 0, vendor: 'Ace Plumbing Supply', day: -8, amount: 1877.65, category: 'materials', description: 'Sink, faucet, rough-in' },
+  { job: 0, day: -6, amount: 2400.00, category: 'labor', method: 'check', description: 'Crew, week of the 12th' },
+  { job: 0, vendor: 'Buildright Lumber', day: -3, amount: 612.18, category: 'materials', description: 'Cabinet trim and hardware' },
+
+  { job: 1, vendor: 'Ace Plumbing Supply', day: -5, amount: 1140.20, category: 'materials', description: 'Vanity and shower valve' },
+  { job: 1, day: -4, amount: 1600.00, category: 'labor', method: 'check' },
+  { job: 1, vendor: 'Delgado Tile & Stone', day: -2, amount: 980.00, category: 'subcontractor', method: 'check' },
+
+  { job: 2, vendor: 'Buildright Lumber', day: -1, amount: 3890.55, category: 'materials', description: 'Composite decking and rail' },
+
+  { job: null, day: -22, amount: 268.00, category: 'other', description: 'General liability, monthly', billable: false },
+  { job: null, day: -15, amount: 92.40, category: 'fuel', description: 'Truck fuel', billable: false },
+  { job: null, day: -7, amount: 268.00, category: 'other', description: 'General liability, monthly', billable: false },
+  { job: null, day: -2, amount: 88.15, category: 'fuel', description: 'Truck fuel', billable: false },
+];
+
 transaction(db, () => {
   if (force) {
+    db.exec('DELETE FROM attachments; DELETE FROM expenses; DELETE FROM vendors; DELETE FROM job_budgets;');
     db.exec('DELETE FROM job_events; DELETE FROM jobs; DELETE FROM clients;');
-    db.exec("DELETE FROM sqlite_sequence WHERE name IN ('job_events', 'jobs', 'clients')");
+    db.exec(`DELETE FROM sqlite_sequence WHERE name IN
+      ('job_events', 'jobs', 'clients', 'expenses', 'vendors', 'attachments')`);
   }
 
   const clientIds = CLIENTS.map((c) => Number(
@@ -75,6 +113,7 @@ transaction(db, () => {
       .run(c.name, c.company ?? null, c.phone ?? null, c.email ?? null, c.address ?? null).lastInsertRowid,
   ));
 
+  const jobIds = [];
   for (const job of JOBS) {
     const status = job.track.length ? job.track.at(-1)[0] : 'lead';
     const id = Number(db.prepare(
@@ -87,6 +126,7 @@ transaction(db, () => {
     ).lastInsertRowid);
 
     db.prepare('UPDATE jobs SET job_number = ? WHERE id = ?').run(`J-${String(id).padStart(4, '0')}`, id);
+    jobIds.push(id);
 
     const firstOffset = job.track.length ? job.track[0][1] - 2 : -1;
     addEvent(id, 'created', null, 'lead', 'Job created as Lead', firstOffset);
@@ -98,7 +138,40 @@ transaction(db, () => {
     }
     for (const [offset, body] of job.notes ?? []) addEvent(id, 'note', null, null, body, offset);
   }
+
+  seedFinancials(jobIds);
 });
+
+/* Phase 2 demo data: budgets and a few weeks of receipts. */
+function seedFinancials(jobIds) {
+  const vendorIds = Object.fromEntries(VENDORS.map((v) => [v.name, Number(
+    db.prepare('INSERT INTO vendors (name, category) VALUES (?, ?)').run(v.name, v.category).lastInsertRowid,
+  )]));
+
+  for (const [index, budget] of Object.entries(BUDGETS)) {
+    db.prepare(
+      `INSERT INTO job_budgets (job_id, contract_cents, materials_budget_cents, labor_budget_cents, other_budget_cents)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).run(jobIds[index], budget.contract * 100, budget.materials * 100, budget.labor * 100, budget.other * 100);
+  }
+
+  for (const e of EXPENSES) {
+    db.prepare(
+      `INSERT INTO expenses (job_id, vendor_id, spent_on, amount_cents, category, payment_method, description, billable, created_at)
+       VALUES (?, ?, date('now', ?), ?, ?, ?, ?, ?, datetime('now', ?))`,
+    ).run(
+      e.job === null ? null : jobIds[e.job],
+      e.vendor ? vendorIds[e.vendor] : null,
+      `${e.day} days`,
+      Math.round(e.amount * 100),
+      e.category,
+      e.method ?? 'card',
+      e.description ?? null,
+      e.billable === false ? 0 : 1,
+      `${e.day} days`,
+    );
+  }
+}
 
 function addEvent(jobId, kind, fromStatus, toStatus, body, dayOffset) {
   db.prepare(
@@ -107,6 +180,10 @@ function addEvent(jobId, kind, fromStatus, toStatus, body, dayOffset) {
   ).run(jobId, kind, fromStatus, toStatus, body ?? null, `${dayOffset} days`);
 }
 
-const counts = db.prepare('SELECT (SELECT COUNT(*) FROM clients) AS c, (SELECT COUNT(*) FROM jobs) AS j').get();
-console.log(`Seeded ${counts.c} clients and ${counts.j} jobs into ${dbFile}`);
+const counts = db.prepare(
+  `SELECT (SELECT COUNT(*) FROM clients) AS c, (SELECT COUNT(*) FROM jobs) AS j,
+          (SELECT COUNT(*) FROM expenses) AS e, (SELECT COUNT(*) FROM vendors) AS v`,
+).get();
+console.log(`Seeded ${counts.c} clients, ${counts.j} jobs, ${counts.v} vendors and ${counts.e} expenses into ${dbFile}`);
+console.log('No account is created by seeding. Start the server and set one up on first use.');
 db.close();

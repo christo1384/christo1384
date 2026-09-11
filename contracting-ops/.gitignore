@@ -6,3 +6,5 @@ data/*.db-shm
 uploads/
 .env
 .DS_Store
+backups/
+*.pem

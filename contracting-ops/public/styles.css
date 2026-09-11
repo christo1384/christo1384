@@ -175,3 +175,68 @@ label { display: block; font-size: .82rem; font-weight: 600; color: var(--muted)
   .topbar-inner { gap: 10px; }
   #new-job-btn { order: 3; }
 }
+
+/* ---------- phase 2: money ---------- */
+.brand-mark { width: 20px; height: 20px; border-radius: 5px; vertical-align: -4px; margin-right: 4px; }
+.tile { text-decoration: none; color: inherit; display: block; }
+a.tile:hover { background: var(--surface-2); }
+
+.pill.cat { background: var(--surface-2); color: var(--muted); }
+
+.money-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.money-row .k { display: block; font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.money-row .v { font-size: 1.2rem; font-weight: 650; }
+.money-row .v.positive { color: var(--accent); }
+.money-row .v.negative { color: var(--danger); }
+
+.meter { margin-top: 10px; }
+.meter-head { display: flex; justify-content: space-between; gap: 10px; font-size: .87rem; margin-bottom: 4px; }
+.meter-track { height: 7px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.meter-fill { height: 100%; background: var(--accent); border-radius: 999px; }
+.meter-fill.over { background: var(--danger); }
+
+.receipt-chip {
+  font: inherit; font-size: .78rem; font-weight: 600; cursor: pointer;
+  padding: 2px 9px; margin-right: 6px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--muted);
+}
+.receipt-chip:hover { color: var(--text); }
+
+.list-link[data-expense] { cursor: default; }
+.list-link[data-expense]:hover { background: transparent; }
+
+.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.table td { padding: 9px 16px; border-bottom: 1px solid var(--border); }
+.table tr:last-child td { border-bottom: 0; }
+.table td.num { text-align: right; white-space: nowrap; width: 1%; }
+
+.lightbox {
+  border: 0; border-radius: var(--radius); padding: 12px; background: var(--surface);
+  max-width: min(900px, calc(100% - 32px)); max-height: 90vh;
+}
+.lightbox::backdrop { background: rgba(10, 15, 20, .7); }
+.lightbox img { display: block; max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 6px; }
+
+/* ---------- sign in ---------- */
+.signin { max-width: 380px; margin: 8vh auto 0; text-align: center; }
+.signin-mark { width: 56px; height: 56px; border-radius: 14px; margin-bottom: 14px; }
+.signin h1 { margin-bottom: 6px; }
+.signin p.muted { margin: 0 0 18px; }
+.signin .card { text-align: left; }
+.signin .meta { margin: 0 0 4px; }
+
+.field-check label { display: flex; align-items: center; gap: 8px; font-size: .95rem; color: var(--text); font-weight: 500; }
+.field-check input { width: auto; }
+
+/* Keeps the header controls off the notch and the home indicator on iOS. */
+@supports (padding: max(0px)) {
+  .topbar-inner { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .view { padding-bottom: max(64px, env(safe-area-inset-bottom)); }
+}
+
+/* Long descriptions should shrink the text column, not push the buttons onto
+   their own line - that doubled every row's height on a phone. */
+.list-link > span:first-child, .list-link > a:first-child { min-width: 0; flex: 1 1 auto; }
+.list-link .right { flex: 0 0 auto; margin-left: auto; }
+
+.two-col { align-items: start; }

@@ -5,16 +5,20 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { createApp } from '../src/server.js';
+import { signIn } from './helpers.js';
 
 let server;
 let base;
 let workDir;
 
+let cookie;
+
 before(async () => {
   workDir = mkdtempSync(join(tmpdir(), 'contracting-ops-'));
-  ({ server } = createApp({ dbFile: join(workDir, 'test.db') }));
+  ({ server } = createApp({ dbFile: join(workDir, 'test.db'), dataDir: workDir }));
   await new Promise((resolve) => server.listen(0, resolve));
   base = `http://127.0.0.1:${server.address().port}`;
+  cookie = await signIn(base, { username: 'mike', display_name: 'Mike', password: 'correct horse battery' });
 });
 
 after(async () => {
@@ -25,7 +29,10 @@ after(async () => {
 async function api(method, path, body) {
   const res = await fetch(base + path, {
     method,
-    headers: body ? { 'content-type': 'application/json' } : undefined,
+    headers: {
+      cookie,
+      ...(body ? { 'content-type': 'application/json' } : {}),
+    },
     body: body ? JSON.stringify(body) : undefined,
   });
   return { status: res.status, body: await res.json() };
@@ -213,7 +220,7 @@ describe('dashboard', () => {
 
 describe('plumbing', () => {
   test('reports health and workflow metadata', async () => {
-    assert.deepEqual((await api('GET', '/api/health')).body, { ok: true, phase: 1 });
+    assert.deepEqual((await api('GET', '/api/health')).body, { ok: true, phase: 2 });
     const meta = await api('GET', '/api/meta');
     assert.equal(meta.body.statuses.length, 8);
     assert.deepEqual(meta.body.priorities, ['low', 'normal', 'high']);
@@ -226,7 +233,7 @@ describe('plumbing', () => {
 
   test('rejects a body that is not a JSON object', async () => {
     const res = await fetch(`${base}/api/clients`, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: '"just a string"',
+      method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: '"just a string"',
     });
     assert.equal(res.status, 400);
   });

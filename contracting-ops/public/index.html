@@ -2,22 +2,30 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ops">
 <title>Contracting Ops</title>
 <link rel="stylesheet" href="/styles.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>&#128296;</text></svg>">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" href="/icon-180.png">
 </head>
 <body>
-<header class="topbar">
+<header class="topbar" id="topbar" hidden>
   <div class="topbar-inner">
-    <a class="brand" href="#/dashboard"><span class="brand-mark">&#128296;</span> Contracting Ops</a>
+    <a class="brand" href="#/dashboard"><img class="brand-mark" src="/icon-180.png" alt=""> Contracting Ops</a>
     <nav class="tabs">
       <a href="#/dashboard" data-tab="dashboard">Dashboard</a>
       <a href="#/jobs" data-tab="jobs">Jobs</a>
+      <a href="#/expenses" data-tab="expenses">Money</a>
+      <a href="#/reports" data-tab="reports">Reports</a>
       <a href="#/clients" data-tab="clients">Clients</a>
     </nav>
-    <button class="btn btn-primary" id="new-job-btn" type="button">New job</button>
+    <button class="btn btn-primary btn-sm" id="new-expense-btn" type="button">Add expense</button>
+    <button class="btn btn-sm" id="account-btn" type="button">Account</button>
   </div>
 </header>
 
@@ -33,6 +41,13 @@
       <button class="btn btn-primary" id="modal-save" value="save" type="button">Save</button>
     </menu>
   </form>
+</dialog>
+
+<dialog id="lightbox" class="lightbox">
+  <img id="lightbox-img" alt="Receipt">
+  <menu class="modal-actions">
+    <button class="btn" id="lightbox-close" type="button">Close</button>
+  </menu>
 </dialog>
 
 <div id="toast" class="toast" hidden></div>
