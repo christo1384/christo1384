@@ -179,6 +179,18 @@ export function registerJobRoutes(router, db) {
   router.delete('/api/jobs/:id', (req, res, { params }) => {
     const id = pathId(params);
     if (!getJob(db, id)) throw notFound('Job not found');
+
+    // Invoices hold the job with ON DELETE RESTRICT: billing history must not
+    // be deleted out from under itself.
+    const invoices = db.prepare('SELECT COUNT(*) AS n FROM invoices WHERE job_id = ?').get(id).n;
+    if (invoices > 0) {
+      throw badRequest(
+        `This job has ${invoices} invoice${invoices === 1 ? '' : 's'} against it and cannot be deleted. `
+        + 'Void the invoices first, or cancel the job instead.',
+        { invoice_count: invoices },
+      );
+    }
+
     db.prepare('DELETE FROM jobs WHERE id = ?').run(id);
     sendJson(res, 200, { deleted: id });
   });

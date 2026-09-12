@@ -11,11 +11,11 @@ rather than waiting for the whole system:
 | ----- | ----- | ------ |
 | **1** | Jobs and their status — clients, the job lifecycle, a timeline per job, a dashboard of what needs attention | **Built and working** |
 | **2** | Financials — accounts, receipts, expense tracking, job costing, budget vs. actual, spend reports | **Built and working** |
-| 3 | Executive + operations — leads and bids, estimates, job photos, invoicing | Specified, not built |
+| **3** | Executive + operations — leads, estimates, invoicing, payments, job photos, business reporting | **Built and working** |
 | 4 | Marketing — referral tracking, review requests, campaign attribution | Deferred (booked solid) |
 
-Phases 3–4 are specified in [`docs/ROADMAP.md`](docs/ROADMAP.md): tables,
-columns, endpoints and acceptance criteria, ready to build in order.
+Phase 4 is specified in [`docs/ROADMAP.md`](docs/ROADMAP.md), along with the
+written trigger for revisiting it.
 
 It runs on a Linux box at home and is used from a phone on the same wifi.
 [`docs/DEPLOY.md`](docs/DEPLOY.md) is the full setup: service, fixed address,
@@ -125,6 +125,40 @@ overhead. Financial history outlives the record it was attached to.
 
 ---
 
+## Phase 3: what it does
+
+**A lead inbox.** Capture a phone call in seconds — name, how they found you,
+what they want. One button converts a lead into a client and a job in a single
+transaction, carrying the description and contact details across and opening the
+job's timeline with where it came from.
+
+**Estimates that hold their shape.** Line items with quantity, unit and cost,
+plus a markup percentage, with live totals. Marking one as sent freezes it: the
+lines, the markup and the terms can no longer be touched, and revising it copies
+it into version 2. There is always an exact record of what the customer was
+shown. Accepting an estimate closes out the other versions, writes its total in
+as the job's contract amount, and moves the job to scheduled.
+
+**Invoices whose status is a fact, not a field.** Build one from the accepted
+estimate (billing exactly what was agreed, with the markup as its own line so
+the total matches to the cent), from the job's billable expenses grouped by
+category, or empty. The status is derived from the payments every time anything
+changes — draft, sent, partial, paid — and cannot be set by hand. A payment
+larger than the balance is refused; deleting one walks the status back. An
+issued invoice is voided, never deleted, and a job with invoices against it
+cannot be deleted at all.
+
+**A job photo record.** Every photo is tagged before, progress, after or issue,
+shrunk in the browser like receipts, and shown as a gallery on the job. Six
+months later it is the difference between remembering and arguing.
+
+**A business report**, answering the four questions worth asking: am I winning
+work (win rate by lead source and by bid), how much is on the books (backlog and
+expected margin), who owes me (receivables aged into buckets), and did the
+finished jobs make money.
+
+---
+
 ## API
 
 All responses are JSON. Errors return `{ "error": "...", "details": { ... } }`.
@@ -159,6 +193,30 @@ Phase 2:
 | `GET` `PUT` | `/api/jobs/:id/budget` | Contract amount and budget lines |
 | `GET` | `/api/jobs/:id/costs` | Spend by category, budget vs. actual, margin |
 | `GET` | `/api/reports/spend` | Totals by month, category, vendor and job |
+
+Phase 3:
+
+| Method | Path | Purpose |
+| ------ | ---- | ------- |
+| `GET` `POST` | `/api/leads` | Inbox (filter `status`, `open`) and capture |
+| `GET` `PATCH` `DELETE` | `/api/leads/:id` | One lead |
+| `POST` | `/api/leads/:id/convert` | Lead → client + job, in one transaction |
+| `GET` `POST` | `/api/jobs/:id/estimates` | Versions for a job; `copy_from_estimate_id` revises |
+| `GET` `PATCH` `DELETE` | `/api/estimates/:id` | One estimate — edits refused once sent |
+| `POST` | `/api/estimates/:id/lines` | Add a line |
+| `PATCH` `DELETE` | `/api/estimate-lines/:id` | Edit or remove a line |
+| `POST` | `/api/estimates/:id/send` `accept` `decline` | The three decisions |
+| `GET` | `/api/invoices` | Receivables (`status=outstanding` / `overdue`) |
+| `GET` `POST` | `/api/jobs/:id/invoices` | Invoices for a job (`from`: estimate, expenses, empty) |
+| `GET` `PATCH` `DELETE` | `/api/invoices/:id` | One invoice |
+| `POST` | `/api/invoices/:id/lines` | Add a line |
+| `PATCH` `DELETE` | `/api/invoice-lines/:id` | Edit or remove a line |
+| `POST` | `/api/invoices/:id/send` `void` | Issue it, or void it |
+| `GET` `POST` | `/api/invoices/:id/payments` | Record a payment; status follows |
+| `DELETE` | `/api/payments/:id` | Remove a payment; status follows back |
+| `GET` `POST` | `/api/jobs/:id/photos` | Gallery and upload (`stage`, `caption`) |
+| `PATCH` `DELETE` | `/api/photos/:id` | Re-stage, re-caption or delete |
+| `GET` | `/api/reports/executive` | Win rate, backlog, receivables, finished-job margin |
 
 Amounts are sent as dollars (`"1,240.55"`, `1240.55` or `"1240"`) and always
 come back as integer cents (`amount_cents`). Improperly grouped input like
@@ -195,12 +253,17 @@ src/
     money.js           dollars to whole cents, no floats
     auth.js            scrypt hashing, sessions, login throttling
     uploads.js         streamed uploads with magic-byte type checks
-  routes/              auth, clients, jobs, dashboard, expenses
+  routes/              auth, clients, jobs, dashboard, expenses,
+                       leads, estimates, invoices, photos, executive
 public/
   app.js               router and boot
   ui.js                fetch wrapper, formatting, cards, modal form
   views-core.js        dashboard, jobs, clients
   views-money.js       expenses, receipts, job costing, reports
+  views-leads.js       the lead inbox and conversion
+  views-estimates.js   the estimate builder
+  views-invoices.js    invoices, payments, receivables
+  views-photos.js      the job photo gallery
   views-auth.js        sign-in and the account menu
 bin/                   user.js, backup.sh, make-icons.js
 deploy/                systemd service + nightly backup timer
@@ -218,6 +281,10 @@ Deliberate choices worth knowing before you extend it:
   already applied is ever edited.
 - **The workflow lives in one module** (`src/lib/workflow.js`). Changing the
   lifecycle means editing that table, not hunting through the routes.
+- **Records that were shown to a customer are immutable.** A sent estimate and
+  an issued invoice can be superseded or voided, never edited or deleted.
+- **Derived state is derived every time.** An invoice's status is recomputed
+  from its payments on every change rather than being a field anyone can set.
 - **Uploads are raw bodies, not multipart.** The only client is ours, and a
   hand-rolled multipart parser is a liability rather than a feature.
 - **The file's leading bytes decide its type**, never the `Content-Type` the
@@ -229,7 +296,7 @@ Deliberate choices worth knowing before you extend it:
 npm test
 ```
 
-51 tests across two suites.
+77 tests across three suites.
 
 `test/api.test.js` (phase 1) covers client and job CRUD, every legal transition
 in sequence, rejection of illegal ones (and that a rejected move leaves no
@@ -242,6 +309,16 @@ and filtering, receipt uploads (generated names, a rejected disguised file, the
 size cap, cleanup on delete, no anonymous reads), budgets and margin arithmetic,
 subcontractor spend counting against the labor line, expenses outliving a
 deleted job, and report rollups summing to their totals.
+
+`test/operations.test.js` (phase 3) covers lead capture and conversion into a
+client and job, that a sent estimate refuses every kind of edit and that its
+revision leaves version 1 untouched, that accepting sets the contract and closes
+the other versions, that an invoice built from an estimate matches it to the
+cent, that the invoice status follows its payments in both directions, that
+overpayment and paying an unsent invoice are refused, that a job with invoices
+cannot be deleted, photo staging and the PDF refusal leaving nothing on disk,
+and that the executive report's aging buckets account for every outstanding
+cent.
 
 ## Security posture
 

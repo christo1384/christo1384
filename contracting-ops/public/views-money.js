@@ -3,6 +3,7 @@ import {
   api, get, esc, card, list, money, moneyShort, fmtDate, fmtMonth, titleCase, meter,
   openForm, openLightbox, toast, attempt, refresh, today, state,
 } from './ui.js';
+import { invoicesView } from './views-invoices.js';
 
 const CATEGORIES = ['materials', 'labor', 'subcontractor', 'permit', 'rental', 'fuel', 'other'];
 const METHODS = ['card', 'check', 'cash', 'ach'];
@@ -147,7 +148,21 @@ export function wireExpenseRows(root, expenses) {
 
 /* ------------------------------ expenses ------------------------------ */
 
-export async function expensesView(params) {
+export async function moneyView(params) {
+  const tab = params.get('tab') || 'expenses';
+  const subTab = (label, value) => `<a class="btn btn-sm${tab === value ? ' btn-primary' : ''}"
+    href="#/money?tab=${value}">${esc(label)}</a>`;
+
+  const view = document.getElementById('view');
+
+  if (tab === 'invoices') {
+    view.innerHTML = `
+      <div class="page-head"><h1>Money</h1></div>
+      <div class="row" style="margin-bottom:14px">${subTab('Expenses', 'expenses')}${subTab('Invoices', 'invoices')}</div>
+      ${await invoicesView(params)}`;
+    return;
+  }
+
   const query = new URLSearchParams();
   for (const key of ['job_id', 'category', 'from', 'to', 'overhead']) {
     if (params.get(key)) query.set(key, params.get(key));
@@ -158,15 +173,16 @@ export async function expensesView(params) {
   const chip = (label, key, value) => {
     const active = (params.get(key) || '') === value;
     const next = new URLSearchParams(params);
+    next.set('tab', 'expenses');
     if (value) next.set(key, value); else next.delete(key);
-    return `<a class="btn btn-sm${active ? ' btn-primary' : ''}" href="#/expenses?${next}">${esc(label)}</a>`;
+    return `<a class="btn btn-sm${active ? ' btn-primary' : ''}" href="#/money?${next}">${esc(label)}</a>`;
   };
 
-  const view = document.getElementById('view');
   view.innerHTML = `
     <div class="page-head"><h1>Money</h1>
       <span class="muted">${totals.count} expense${totals.count === 1 ? '' : 's'} &middot; ${money(totals.total_cents)}</span>
     </div>
+    <div class="row" style="margin-bottom:14px">${subTab('Expenses', 'expenses')}${subTab('Invoices', 'invoices')}</div>
     <div class="row" style="margin-bottom:12px">
       ${chip('All', 'category', '')}
       ${CATEGORIES.map((c) => chip(titleCase(c), 'category', c)).join('')}
@@ -260,7 +276,10 @@ export async function reportsView(params) {
   const query = new URLSearchParams();
   if (from) query.set('from', from);
   if (to) query.set('to', to);
-  const report = await get(`/api/reports/spend?${query}`);
+  const [report, exec] = await Promise.all([
+    get(`/api/reports/spend?${query}`),
+    get('/api/reports/executive'),
+  ]);
 
   const rangeChip = (label, months) => {
     const next = new URLSearchParams();
@@ -281,10 +300,54 @@ export async function reportsView(params) {
       </tr>`).join('')}</tbody></table>`
     : `<p class="empty">${esc(emptyText)}</p>`);
 
+  const pct = (v) => (v === null ? '\u2014' : `${v}%`);
+
+  const executive = `
+    <div class="tiles">
+      <div class="card tile"><div class="n">${pct(exec.estimates.win_rate_percent)}</div>
+        <div class="k">Bid win rate</div></div>
+      <div class="card tile"><div class="n">${moneyShort(exec.estimates.out_for_decision_cents)}</div>
+        <div class="k">Out for decision</div></div>
+      <div class="card tile"><div class="n">${moneyShort(exec.backlog.contract_cents)}</div>
+        <div class="k">Backlog (${exec.backlog.job_count} jobs)</div></div>
+      <a class="card tile${exec.receivables.overdue_cents > 0 ? ' alert' : ''}" href="#/money?tab=invoices&status=outstanding">
+        <div class="n">${moneyShort(exec.receivables.outstanding_cents)}</div>
+        <div class="k">Owed to you</div></a>
+      <div class="card tile"><div class="n">${exec.leads.open}</div><div class="k">Open leads</div></div>
+    </div>
+    <div class="two-col" style="margin-bottom:16px">
+      ${card('Where the work comes from',
+        exec.leads.by_source.length
+          ? `<table class="table"><tbody>${exec.leads.by_source.map((r) => `<tr>
+              <td>${esc(titleCase(r.source))}</td>
+              <td class="num meta">${r.converted} of ${r.total} won</td>
+              <td class="num">${r.total ? Math.round((r.converted / r.total) * 100) : 0}%</td>
+            </tr>`).join('')}</tbody></table>`
+          : '<p class="empty">No leads recorded yet.</p>', { flush: true })}
+      ${card('Money owed to you',
+        exec.receivables.outstanding_cents
+          ? `<table class="table"><tbody>${exec.receivables.aging.map((b) => `<tr>
+              <td>${esc(b.label)}</td><td class="num">${money(b.cents)}</td>
+            </tr>`).join('')}</tbody></table>`
+          : '<p class="empty">Nothing outstanding.</p>', { flush: true })}
+    </div>
+    ${exec.completed_jobs.length ? `<div class="stack" style="margin-bottom:16px">${card('Margin on finished jobs',
+      `<table class="table"><tbody>${exec.completed_jobs.map((j) => `<tr>
+        <td><a href="#/jobs/${j.id}">${esc(j.job_number)} ${esc(j.title)}</a></td>
+        <td class="num meta">${j.contract_cents === null
+          ? `${money(j.spent_cents)} spent`
+          : `${money(j.contract_cents)} contract`}</td>
+        <td class="num">${j.margin_cents === null
+          ? '<span class="meta">no contract set</span>'
+          : `${money(j.margin_cents)}${j.margin_percent === null ? '' : ` (${j.margin_percent}%)`}`}</td>
+      </tr>`).join('')}</tbody></table>`, { flush: true })}</div>` : ''}`;
+
   document.getElementById('view').innerHTML = `
     <div class="page-head"><h1>Reports</h1>
-      <span class="muted">${money(report.total_cents)} total${from ? ` since ${fmtDate(from)}` : ''}</span>
+      <span class="muted">${money(report.total_cents)} spent${from ? ` since ${fmtDate(from)}` : ''}</span>
     </div>
+    ${executive}
+    <h2 style="margin:24px 0 12px">Spend</h2>
     <div class="row" style="margin-bottom:12px">
       ${rangeChip('All time', 0)}${rangeChip('Last 3 months', 3)}${rangeChip('Last 12 months', 12)}
     </div>

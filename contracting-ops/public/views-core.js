@@ -3,7 +3,10 @@ import {
   api, get, esc, card, list, jobRow, pill, statusLabel, money, moneyShort,
   fmtDate, fmtWhen, daysSince, openForm, toast, attempt, refresh, state,
 } from './ui.js';
-import { renderJobMoney, newExpense } from './views-money.js';
+import { renderJobMoney } from './views-money.js';
+import { renderJobEstimates } from './views-estimates.js';
+import { renderJobInvoices } from './views-invoices.js';
+import { renderJobPhotos } from './views-photos.js';
 
 /* ----------------------------- dashboard ----------------------------- */
 
@@ -147,7 +150,10 @@ export async function jobDetailView(id) {
     <div class="detail-grid">
       <div class="stack">
         ${card('Move this job', `<div class="row">${moves || '<span class="muted">No moves available.</span>'}</div>`)}
+        <section class="card" id="job-estimates"><div class="card-body muted">Loading estimates…</div></section>
         <section class="card" id="job-money"><div class="card-body muted">Loading money…</div></section>
+        <section class="card" id="job-invoices"><div class="card-body muted">Loading invoices…</div></section>
+        <section class="card" id="job-photos"><div class="card-body muted">Loading photos…</div></section>
         ${card('Timeline', timeline, {
           flush: true,
           actions: '<button class="btn btn-sm" id="add-note">Add note</button>',
@@ -159,8 +165,19 @@ export async function jobDetailView(id) {
       </div>
     </div>`;
 
-  renderJobMoney(document.getElementById('job-money'), job.id)
-    .catch((err) => { document.getElementById('job-money').innerHTML = `<div class="card-body muted">${esc(err.message)}</div>`; });
+  // Each panel loads on its own so one slow or failing section cannot blank
+  // the page the crew is standing in front of.
+  for (const [id, render] of [
+    ['job-estimates', renderJobEstimates],
+    ['job-money', renderJobMoney],
+    ['job-invoices', renderJobInvoices],
+    ['job-photos', renderJobPhotos],
+  ]) {
+    const panel = document.getElementById(id);
+    render(panel, job.id).catch((err) => {
+      panel.innerHTML = `<div class="card-body muted">${esc(err.message)}</div>`;
+    });
+  }
 
   view.querySelectorAll('[data-move]').forEach((btn) => {
     btn.addEventListener('click', async () => {

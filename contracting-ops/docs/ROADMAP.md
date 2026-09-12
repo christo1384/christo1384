@@ -1,9 +1,8 @@
 # Roadmap
 
-Phases 1 and 2 are built. This document specifies phases 3–4 in enough detail
-to build them in order: the tables, the endpoints, the screens, and what "done"
-means. The phase 2 section is kept as a record of what was specified and what
-shipped.
+Phases 1, 2 and 3 are built. Phase 4 is deliberately not. The shipped sections
+are kept as a record of what was specified against what was built; the phase 4
+section is the live specification, along with the trigger for starting it.
 
 The sequencing rule is that **each phase has to be independently useful**. Phase
 2 is worth running even if phase 3 never gets built. That is what makes it safe
@@ -128,11 +127,24 @@ CREATE INDEX idx_attachments_owner ON attachments(owner_type, owner_id);
 
 ---
 
-## Phase 3 — Executive and operations (next)
+## Phase 3 — Executive and operations (built)
+
+Shipped as migration `004_phase3_operations.sql`. What follows is the original
+specification; see the README for what the finished features do. Two things
+were decided during the build and are worth recording:
+
+- **Invoicing from an estimate bills the markup as its own line** rather than
+  spreading the percentage across the unit prices. Spreading it does not
+  reliably sum back to the estimate total once each unit price is rounded to
+  the cent, and an invoice that does not match the accepted number is worse
+  than one with a visible "Overhead and profit" line.
+- **Photo stages are stored as a prefix on the existing `attachments.caption`**,
+  so phase 3 needed no schema change to a phase 2 table that already held
+  receipts.
 
 The functions that were living in his head or in text messages.
 
-### Schema — `003_phase3_operations.sql`
+### Schema — shipped as `004_phase3_operations.sql`
 
 ```sql
 CREATE TABLE leads (

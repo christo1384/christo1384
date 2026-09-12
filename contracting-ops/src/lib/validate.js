@@ -93,3 +93,12 @@ export function optionalBool(body, field) {
   if ([1, 0, '1', '0', 'true', 'false'].includes(value)) return ['1', 1, 'true', true].includes(value) ? 1 : 0;
   throw badRequest(`"${field}" must be true or false`, { field });
 }
+
+/** A positive quantity such as 2, 0.5 or 12.75. Not money — see money.js. */
+export function requiredNumber(body, field, { min = 0, max = 1e9 } = {}) {
+  const value = Number(String(body[field] ?? '').trim());
+  if (!Number.isFinite(value) || value < min || value > max) {
+    throw badRequest(`"${field}" must be a number between ${min} and ${max}`, { field });
+  }
+  return value;
+}

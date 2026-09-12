@@ -4,7 +4,10 @@ import { signInView, accountMenu } from './views-auth.js';
 import {
   dashboardView, jobsView, jobDetailView, clientsView, clientDetailView,
 } from './views-core.js';
-import { expensesView, reportsView, newExpense } from './views-money.js';
+import { moneyView, reportsView, newExpense } from './views-money.js';
+import { leadsView, newLead } from './views-leads.js';
+import { estimateView } from './views-estimates.js';
+import { invoiceView } from './views-invoices.js';
 
 const view = document.getElementById('view');
 const topbar = document.getElementById('topbar');
@@ -13,7 +16,11 @@ const ROUTES = [
   [/^\/dashboard$/, 'dashboard', () => dashboardView()],
   [/^\/jobs$/, 'jobs', (m, params) => jobsView(params)],
   [/^\/jobs\/(\d+)$/, 'jobs', (m) => jobDetailView(m[1])],
-  [/^\/expenses$/, 'expenses', (m, params) => expensesView(params)],
+  [/^\/money$/, 'money', (m, params) => moneyView(params)],
+  [/^\/expenses$/, 'money', (m, params) => moneyView(params)],
+  [/^\/leads$/, 'leads', (m, params) => leadsView(params)],
+  [/^\/estimates\/(\d+)$/, 'jobs', (m) => estimateView(m[1])],
+  [/^\/invoices\/(\d+)$/, 'money', (m) => invoiceView(m[1])],
   [/^\/reports$/, 'reports', (m, params) => reportsView(params)],
   [/^\/clients$/, 'clients', () => clientsView()],
   [/^\/clients\/(\d+)$/, 'clients', (m) => clientDetailView(m[1])],
@@ -56,6 +63,7 @@ async function render() {
 }
 
 document.getElementById('new-expense-btn').addEventListener('click', () => newExpense());
+document.getElementById('new-lead-btn').addEventListener('click', () => newLead());
 document.getElementById('account-btn').addEventListener('click', accountMenu);
 
 window.addEventListener('hashchange', render);

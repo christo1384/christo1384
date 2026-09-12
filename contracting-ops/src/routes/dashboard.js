@@ -1,12 +1,30 @@
 import { sendJson } from '../lib/http.js';
 import { STATUSES, PRIORITIES, groupKeys, statusLabel } from '../lib/workflow.js';
+import { EXPENSE_CATEGORIES, PAYMENT_METHODS } from './expenses.js';
+import { LEAD_STATUSES, LEAD_SOURCES } from './leads.js';
+import { ESTIMATE_STATUSES, UNITS } from './estimates.js';
+import { INVOICE_STATUSES, PAYMENT_METHODS as INVOICE_PAYMENT_METHODS } from './invoices.js';
+import { PHOTO_STAGES } from './photos.js';
 
 const STALE_DAYS = 7;
 const UPCOMING_DAYS = 14;
 
 export function registerDashboardRoutes(router, db) {
   router.get('/api/meta', (req, res) => {
-    sendJson(res, 200, { statuses: STATUSES, priorities: PRIORITIES, stale_days: STALE_DAYS });
+    sendJson(res, 200, {
+      statuses: STATUSES,
+      priorities: PRIORITIES,
+      stale_days: STALE_DAYS,
+      expense_categories: EXPENSE_CATEGORIES,
+      expense_payment_methods: PAYMENT_METHODS,
+      lead_statuses: LEAD_STATUSES,
+      lead_sources: LEAD_SOURCES,
+      estimate_statuses: ESTIMATE_STATUSES,
+      units: UNITS,
+      invoice_statuses: INVOICE_STATUSES,
+      payment_methods: INVOICE_PAYMENT_METHODS,
+      photo_stages: PHOTO_STAGES,
+    });
   });
 
   router.get('/api/dashboard', (req, res) => {

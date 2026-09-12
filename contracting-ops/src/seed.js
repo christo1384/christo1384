@@ -5,6 +5,7 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openDb, transaction } from './db.js';
+import { recomputeStatus } from './routes/invoices.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dbFile = process.env.DB_FILE ?? join(here, '..', 'data', 'ops.db');
@@ -100,12 +101,73 @@ const EXPENSES = [
   { job: null, day: -2, amount: 88.15, category: 'fuel', description: 'Truck fuel', billable: false },
 ];
 
+/* Phase 3 demo data: leads, an estimate trail, and invoices part-paid. */
+const LEADS = [
+  { name: 'Priya Raman', phone: '(512) 555-0188', source: 'referral', day: -2,
+    description: 'Kitchen island and new pendants', status: 'new' },
+  { name: 'Tom Halvorsen', phone: '(512) 555-0191', source: 'sign', day: -5,
+    description: 'Wants a quote on re-siding the garage', status: 'contacted' },
+  { name: 'Brookside HOA', email: 'board@brookside.example.com', source: 'web', day: -9,
+    description: 'Three units need bathroom fans vented properly', status: 'qualified' },
+  { name: 'Gary Nowak', phone: '(512) 555-0132', source: 'web', day: -24,
+    description: 'Wanted a whole-house remodel', status: 'lost',
+    lost_reason: 'Budget was about half what the work costs' },
+  { name: 'Ellen Kovac', phone: '(512) 555-0119', source: 'referral', day: -18,
+    description: 'Rear deck is rotting out', status: 'converted', job: 2 },
+  { name: 'Sam Boateng', phone: '(512) 555-0166', source: 'repeat', day: -12,
+    description: 'Garage slab and apron', status: 'converted', job: 3 },
+];
+
+// [description, quantity, unit, unit cost dollars, category]
+const ESTIMATES = [
+  { job: 0, status: 'accepted', markup: 18, day: -34, decided: -27,
+    notes: 'Includes demo, haul-off and final clean. Appliances by owner.',
+    lines: [
+      ['Demolition and haul-off', 1, 'ls', 2400, 'labor'],
+      ['Framing and blocking', 1, 'ls', 3100, 'labor'],
+      ['Cabinets and install', 1, 'ls', 14800, 'materials'],
+      ['Quartz countertops', 46, 'sf', 78, 'materials'],
+      ['Electrical rough and trim', 1, 'ls', 3850, 'subcontractor'],
+      ['Plumbing rough and trim', 1, 'ls', 2950, 'subcontractor'],
+      ['Tile backsplash and floor', 190, 'sf', 14.5, 'subcontractor'],
+      ['Paint', 1, 'ls', 1850, 'subcontractor'],
+    ] },
+  { job: 4, status: 'sent', markup: 12, day: -26,
+    notes: 'Price holds for 30 days. Lead time on the units is six weeks.',
+    lines: [
+      ['Vinyl replacement windows', 10, 'ea', 615, 'materials'],
+      ['Install and trim out', 10, 'ea', 210, 'labor'],
+      ['Disposal', 1, 'ls', 180, 'other'],
+    ] },
+  { job: 3, status: 'draft', markup: 15, day: -6,
+    lines: [
+      ['Excavation and base', 1, 'ls', 2200, 'subcontractor'],
+      ['Concrete, 4000 psi', 14, 'cy', 185, 'materials'],
+      ['Place and finish', 26, 'hr', 68, 'labor'],
+    ] },
+];
+
+const INVOICES = [
+  { job: 5, issued: -55, due: -41, paid: [[-44, 'check', '2287']],
+    lines: [['Powder room vanity swap, labor and materials', 1, 1450]] },
+  { job: 1, issued: -10, due: 4, paid: [[-3, 'ach', 'Ruiz PG 0912']], partial: 0.6,
+    lines: [['Bathroom refresh, progress billing', 1, 6400]] },
+  { job: 0, issued: null, due: null, paid: [],
+    lines: [['Kitchen remodel, first progress billing', 1, 18000]] },
+];
+
+const isoDay = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+const isoAt = (offset) => new Date(Date.now() + offset * 86400000).toISOString().replace('T', ' ').slice(0, 19);
+
 transaction(db, () => {
   if (force) {
+    db.exec(`DELETE FROM payments; DELETE FROM invoice_lines; DELETE FROM invoices;
+             DELETE FROM estimate_lines; DELETE FROM estimates; DELETE FROM leads;`);
     db.exec('DELETE FROM attachments; DELETE FROM expenses; DELETE FROM vendors; DELETE FROM job_budgets;');
     db.exec('DELETE FROM job_events; DELETE FROM jobs; DELETE FROM clients;');
     db.exec(`DELETE FROM sqlite_sequence WHERE name IN
-      ('job_events', 'jobs', 'clients', 'expenses', 'vendors', 'attachments')`);
+      ('job_events', 'jobs', 'clients', 'expenses', 'vendors', 'attachments',
+       'leads', 'estimates', 'estimate_lines', 'invoices', 'invoice_lines', 'payments')`);
   }
 
   const clientIds = CLIENTS.map((c) => Number(
@@ -140,7 +202,80 @@ transaction(db, () => {
   }
 
   seedFinancials(jobIds);
+  seedOperations(jobIds);
 });
+
+function seedOperations(jobIds) {
+  for (const lead of LEADS) {
+    db.prepare(
+      `INSERT INTO leads (name, phone, email, source, description, received_on, status, lost_reason, converted_job_id, created_at)
+       VALUES (?, ?, ?, ?, ?, date('now', ?), ?, ?, ?, datetime('now', ?))`,
+    ).run(
+      lead.name, lead.phone ?? null, lead.email ?? null, lead.source ?? null,
+      lead.description ?? null, `${lead.day} days`, lead.status, lead.lost_reason ?? null,
+      lead.job === undefined ? null : jobIds[lead.job], `${lead.day} days`,
+    );
+  }
+
+  for (const est of ESTIMATES) {
+    const estimateId = Number(db.prepare(
+      `INSERT INTO estimates (job_id, version, status, markup_percent, notes, sent_at, decided_at, created_at)
+       VALUES (?, 1, ?, ?, ?, ?, ?, datetime('now', ?))`,
+    ).run(
+      jobIds[est.job], est.status, est.markup, est.notes ?? null,
+      est.status === 'draft' ? null : isoAt(est.day),
+      est.decided === undefined ? null : isoAt(est.decided),
+      `${est.day} days`,
+    ).lastInsertRowid);
+
+    est.lines.forEach(([description, quantity, unit, cost, category], index) => {
+      db.prepare(
+        `INSERT INTO estimate_lines (estimate_id, sort_order, description, quantity, unit, unit_cost_cents, category)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run(estimateId, index, description, quantity, unit, Math.round(cost * 100), category);
+    });
+
+    // An accepted estimate is the contract amount, exactly as the API does it.
+    if (est.status === 'accepted') {
+      const subtotal = est.lines.reduce((n, [, q, , cost]) => n + Math.round(q * Math.round(cost * 100)), 0);
+      const total = subtotal + Math.round(subtotal * (est.markup / 100));
+      db.prepare(
+        `INSERT INTO job_budgets (job_id, contract_cents) VALUES (?, ?)
+         ON CONFLICT(job_id) DO UPDATE SET contract_cents = excluded.contract_cents`,
+      ).run(jobIds[est.job], total);
+    }
+  }
+
+  for (const inv of INVOICES) {
+    const id = Number(db.prepare(
+      `INSERT INTO invoices (job_id, invoice_number, status, issued_on, due_on, created_at)
+       VALUES (?, 'pending', 'draft', ?, ?, datetime('now', ?))`,
+    ).run(
+      jobIds[inv.job],
+      inv.issued === null ? null : isoDay(inv.issued),
+      inv.due === null ? null : isoDay(inv.due),
+      `${inv.issued ?? -1} days`,
+    ).lastInsertRowid);
+    db.prepare('UPDATE invoices SET invoice_number = ? WHERE id = ?').run(`INV-${String(id).padStart(4, '0')}`, id);
+
+    inv.lines.forEach(([description, quantity, price], index) => {
+      db.prepare(
+        `INSERT INTO invoice_lines (invoice_id, sort_order, description, quantity, unit_price_cents)
+         VALUES (?, ?, ?, ?, ?)`,
+      ).run(id, index, description, quantity, Math.round(price * 100));
+    });
+
+    const total = inv.lines.reduce((n, [, q, price]) => n + Math.round(q * Math.round(price * 100)), 0);
+    for (const [day, method, reference] of inv.paid) {
+      db.prepare(
+        `INSERT INTO payments (invoice_id, received_on, amount_cents, method, reference, created_at)
+         VALUES (?, date('now', ?), ?, ?, ?, datetime('now', ?))`,
+      ).run(id, `${day} days`, Math.round(total * (inv.partial ?? 1)), method, reference, `${day} days`);
+    }
+
+    recomputeStatus(db, id);
+  }
+}
 
 /* Phase 2 demo data: budgets and a few weeks of receipts. */
 function seedFinancials(jobIds) {
@@ -182,8 +317,11 @@ function addEvent(jobId, kind, fromStatus, toStatus, body, dayOffset) {
 
 const counts = db.prepare(
   `SELECT (SELECT COUNT(*) FROM clients) AS c, (SELECT COUNT(*) FROM jobs) AS j,
-          (SELECT COUNT(*) FROM expenses) AS e, (SELECT COUNT(*) FROM vendors) AS v`,
+          (SELECT COUNT(*) FROM expenses) AS e, (SELECT COUNT(*) FROM vendors) AS v,
+          (SELECT COUNT(*) FROM leads) AS l, (SELECT COUNT(*) FROM estimates) AS es,
+          (SELECT COUNT(*) FROM invoices) AS i`,
 ).get();
-console.log(`Seeded ${counts.c} clients, ${counts.j} jobs, ${counts.v} vendors and ${counts.e} expenses into ${dbFile}`);
+console.log(`Seeded ${counts.c} clients, ${counts.j} jobs, ${counts.v} vendors, ${counts.e} expenses, `
+  + `${counts.l} leads, ${counts.es} estimates and ${counts.i} invoices into ${dbFile}`);
 console.log('No account is created by seeding. Start the server and set one up on first use.');
 db.close();

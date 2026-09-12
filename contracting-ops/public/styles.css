@@ -240,3 +240,63 @@ a.tile:hover { background: var(--surface-2); }
 .list-link .right { flex: 0 0 auto; margin-left: auto; }
 
 .two-col { align-items: start; }
+
+/* ---------- phase 3: leads, estimates, invoices, photos ---------- */
+.pill.lead-new         { background: #e8eefc; color: #24408c; }
+.pill.lead-contacted   { background: #e6f0f6; color: #1e5670; }
+.pill.lead-qualified   { background: #e0f3e6; color: #14603f; }
+.pill.lead-converted   { background: #e6e9ec; color: #3d4855; }
+.pill.lead-lost        { background: #f7e3e1; color: #8c2b23; }
+
+.pill.est-draft    { background: var(--surface-2); color: var(--muted); }
+.pill.est-sent     { background: #fdf0d9; color: #7a5410; }
+.pill.est-accepted { background: #e0f3e6; color: #14603f; }
+.pill.est-declined { background: #f7e3e1; color: #8c2b23; }
+.pill.est-expired  { background: #e6e9ec; color: #3d4855; }
+
+.pill.inv-draft   { background: var(--surface-2); color: var(--muted); }
+.pill.inv-sent    { background: #e8eefc; color: #24408c; }
+.pill.inv-partial { background: #fdf0d9; color: #7a5410; }
+.pill.inv-paid    { background: #e0f3e6; color: #14603f; }
+.pill.inv-void    { background: #e6e9ec; color: #3d4855; }
+.pill.overdue     { background: #f7e3e1; color: #8c2b23; }
+
+.pill.stage-before   { background: #e8eefc; color: #24408c; }
+.pill.stage-progress { background: #fdf0d9; color: #7a5410; }
+.pill.stage-after    { background: #e0f3e6; color: #14603f; }
+.pill.stage-issue    { background: #f7e3e1; color: #8c2b23; }
+
+.notice {
+  background: var(--warn-bg); border: 1px solid var(--warn-border);
+  border-radius: var(--radius); padding: 10px 14px; margin: 0 0 16px; font-size: .9rem;
+}
+
+/* Line-item tables on estimates and invoices. */
+.table.lines th {
+  text-align: left; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--muted); padding: 9px 16px; border-bottom: 1px solid var(--border); font-weight: 650;
+}
+.table.lines th.num, .table.lines td.num { text-align: right; }
+
+.totals { font-size: .95rem; }
+.totals > div { display: flex; justify-content: space-between; gap: 16px; padding: 5px 0; }
+.totals .grand {
+  border-top: 1px solid var(--border); margin-top: 5px; padding-top: 9px;
+  font-size: 1.15rem; font-weight: 680;
+}
+
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.photo { margin: 0; }
+.photo-btn {
+  display: block; width: 100%; padding: 0; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface-2);
+}
+.photo-btn img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.photo figcaption { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: .82rem; }
+.photo figcaption .btn { margin-left: auto; }
+
+@media (max-width: 720px) {
+  /* Line tables are the one thing allowed to scroll sideways. */
+  .card .table.lines { min-width: 460px; }
+  .card:has(.table.lines) .card-body, .card > .table.lines { overflow-x: auto; }
+}
