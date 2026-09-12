@@ -84,13 +84,17 @@ export function registerExpenseRoutes(router, db, { uploadDir }) {
     if (vendorId && !db.prepare('SELECT 1 FROM vendors WHERE id = ?').get(vendorId)) {
       throw badRequest('vendor_id does not match a vendor');
     }
+    const campaignId = optionalId(body, 'campaign_id') ?? null;
+    if (campaignId && !db.prepare('SELECT 1 FROM campaigns WHERE id = ?').get(campaignId)) {
+      throw badRequest('campaign_id does not match a campaign');
+    }
 
     const info = db.prepare(
       `INSERT INTO expenses
-         (job_id, vendor_id, spent_on, amount_cents, tax_cents, category, payment_method, description, billable, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (job_id, vendor_id, campaign_id, spent_on, amount_cents, tax_cents, category, payment_method, description, billable, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
-      jobId, vendorId,
+      jobId, vendorId, campaignId,
       requiredDate(body, 'spent_on'),
       requiredCents(body, 'amount'),
       optionalCents(body, 'tax') ?? 0,
@@ -133,6 +137,7 @@ export function registerExpenseRoutes(router, db, { uploadDir }) {
       payment_method: optionalEnum(body, 'payment_method', PAYMENT_METHODS),
       description: optionalText(body, 'description', { max: 500 }),
       billable: optionalBool(body, 'billable'),
+      campaign_id: optionalId(body, 'campaign_id'),
     });
 
     if (columns.length) {
@@ -305,11 +310,13 @@ export function registerExpenseRoutes(router, db, { uploadDir }) {
 /* ------------------------------ helpers ------------------------------ */
 
 const selectExpense = `
-  SELECT e.*, v.name AS vendor_name, j.job_number, j.title AS job_title, u.display_name AS created_by_name
+  SELECT e.*, v.name AS vendor_name, j.job_number, j.title AS job_title,
+         u.display_name AS created_by_name, cm.name AS campaign_name
     FROM expenses e
     LEFT JOIN vendors v ON v.id = e.vendor_id
     LEFT JOIN jobs j ON j.id = e.job_id
-    LEFT JOIN users u ON u.id = e.created_by`;
+    LEFT JOIN users u ON u.id = e.created_by
+    LEFT JOIN campaigns cm ON cm.id = e.campaign_id`;
 
 function getExpense(db, id) {
   const row = db.prepare(`${selectExpense} WHERE e.id = ?`).get(id);

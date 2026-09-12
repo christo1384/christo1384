@@ -156,18 +156,33 @@ const INVOICES = [
     lines: [['Kitchen remodel, first progress billing', 1, 18000]] },
 ];
 
+const CAMPAIGNS = [
+  { name: 'Truck lettering', channel: 'truck', started: -400,
+    notes: 'Both trucks wrapped. Paid once, still working.' },
+  { name: 'Little League sponsorship', channel: 'sponsorship', started: -120,
+    notes: 'Banner at the field plus the team shirts.' },
+];
+
+const MARKETING_SPEND = [
+  { campaign: 0, day: -95, amount: 1850, description: 'Truck wrap, second truck' },
+  { campaign: 1, day: -112, amount: 750, description: 'Season sponsorship' },
+  { campaign: 1, day: -108, amount: 240, description: 'Banner printing' },
+];
+
 const isoDay = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
 const isoAt = (offset) => new Date(Date.now() + offset * 86400000).toISOString().replace('T', ' ').slice(0, 19);
 
 transaction(db, () => {
   if (force) {
-    db.exec(`DELETE FROM payments; DELETE FROM invoice_lines; DELETE FROM invoices;
+    db.exec(`DELETE FROM review_requests; DELETE FROM campaigns;
+             DELETE FROM payments; DELETE FROM invoice_lines; DELETE FROM invoices;
              DELETE FROM estimate_lines; DELETE FROM estimates; DELETE FROM leads;`);
     db.exec('DELETE FROM attachments; DELETE FROM expenses; DELETE FROM vendors; DELETE FROM job_budgets;');
     db.exec('DELETE FROM job_events; DELETE FROM jobs; DELETE FROM clients;');
     db.exec(`DELETE FROM sqlite_sequence WHERE name IN
       ('job_events', 'jobs', 'clients', 'expenses', 'vendors', 'attachments',
-       'leads', 'estimates', 'estimate_lines', 'invoices', 'invoice_lines', 'payments')`);
+       'leads', 'estimates', 'estimate_lines', 'invoices', 'invoice_lines', 'payments',
+       'campaigns', 'review_requests')`);
   }
 
   const clientIds = CLIENTS.map((c) => Number(
@@ -203,7 +218,44 @@ transaction(db, () => {
 
   seedFinancials(jobIds);
   seedOperations(jobIds);
+  seedMarketing(jobIds);
 });
+
+/* Phase 4 demo data: campaigns, referrals and the review queue. */
+function seedMarketing(jobIds) {
+  const campaignIds = CAMPAIGNS.map((c) => Number(db.prepare(
+    "INSERT INTO campaigns (name, channel, started_on, notes) VALUES (?, ?, date('now', ?), ?)",
+  ).run(c.name, c.channel, `${c.started} days`, c.notes).lastInsertRowid));
+
+  for (const spend of MARKETING_SPEND) {
+    db.prepare(
+      `INSERT INTO expenses (spent_on, amount_cents, category, payment_method, description, billable, campaign_id, created_at)
+       VALUES (date('now', ?), ?, 'other', 'card', ?, 0, ?, datetime('now', ?))`,
+    ).run(`${spend.day} days`, Math.round(spend.amount * 100), spend.description,
+      campaignIds[spend.campaign], `${spend.day} days`);
+  }
+
+  // Dana referred the deck job; the window enquiry came off the truck.
+  const dana = db.prepare("SELECT id FROM clients WHERE name = 'Dana Whitfield'").get();
+  db.prepare("UPDATE leads SET referred_by_client_id = ? WHERE name = 'Ellen Kovac'").run(dana.id);
+  db.prepare("UPDATE leads SET referred_by_client_id = ? WHERE name = 'Priya Raman'").run(dana.id);
+  db.prepare('UPDATE leads SET campaign_id = ? WHERE name IN (?, ?)')
+    .run(campaignIds[0], 'Tom Halvorsen', 'Gary Nowak');
+
+  // The completed powder room is waiting to be asked; an older one came back.
+  const complete = db.prepare("SELECT id, client_id FROM jobs WHERE status = 'complete'").all();
+  for (const [index, job] of complete.entries()) {
+    if (index === 0) {
+      db.prepare(
+        `INSERT INTO review_requests (job_id, client_id, status, channel, requested_on, responded_on, rating, notes)
+         VALUES (?, ?, 'received', 'email', date('now', '-40 days'), date('now', '-38 days'), 5,
+                 'Five stars on Google, mentioned the clean-up')`,
+      ).run(job.id, job.client_id);
+    } else {
+      db.prepare('INSERT INTO review_requests (job_id, client_id) VALUES (?, ?)').run(job.id, job.client_id);
+    }
+  }
+}
 
 function seedOperations(jobIds) {
   for (const lead of LEADS) {

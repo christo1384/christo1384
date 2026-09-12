@@ -112,11 +112,11 @@ export async function invoiceView(id) {
   </tr>`;
 
   const linesTable = invoice.lines.length
-    ? `<table class="table lines">
+    ? `<div class="scroll-x"><table class="table lines">
         <thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Price</th>
           <th class="num">Total</th>${open ? '<th></th>' : ''}</tr></thead>
         <tbody>${invoice.lines.map(lineRow).join('')}</tbody>
-      </table>`
+      </table></div>`
     : '<p class="empty">No lines yet.</p>';
 
   const paymentsList = list(invoice.payments, (p) => `<li><div class="list-link">

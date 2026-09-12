@@ -5,6 +5,7 @@ import { LEAD_STATUSES, LEAD_SOURCES } from './leads.js';
 import { ESTIMATE_STATUSES, UNITS } from './estimates.js';
 import { INVOICE_STATUSES, PAYMENT_METHODS as INVOICE_PAYMENT_METHODS } from './invoices.js';
 import { PHOTO_STAGES } from './photos.js';
+import { CAMPAIGN_CHANNELS, REVIEW_STATUSES, REVIEW_CHANNELS } from './marketing.js';
 
 const STALE_DAYS = 7;
 const UPCOMING_DAYS = 14;
@@ -24,6 +25,9 @@ export function registerDashboardRoutes(router, db) {
       invoice_statuses: INVOICE_STATUSES,
       payment_methods: INVOICE_PAYMENT_METHODS,
       photo_stages: PHOTO_STAGES,
+      campaign_channels: CAMPAIGN_CHANNELS,
+      review_statuses: REVIEW_STATUSES,
+      review_channels: REVIEW_CHANNELS,
     });
   });
 

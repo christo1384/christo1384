@@ -295,8 +295,16 @@ a.tile:hover { background: var(--surface-2); }
 .photo figcaption { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: .82rem; }
 .photo figcaption .btn { margin-left: auto; }
 
-@media (max-width: 720px) {
-  /* Line tables are the one thing allowed to scroll sideways. */
-  .card .table.lines { min-width: 460px; }
-  .card:has(.table.lines) .card-body, .card > .table.lines { overflow-x: auto; }
-}
+/* Line tables are the one thing allowed to scroll sideways; everything else
+   must fit the phone. Grid and flex children default to min-width:auto, which
+   refuses to shrink below their content - so the scroller never engages until
+   every ancestor is allowed to be narrower than what it holds. */
+.stack > *, .two-col > *, .detail-grid > *, .card, .card-body { min-width: 0; }
+.scroll-x { overflow-x: auto; min-width: 0; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.scroll-x .table.lines { min-width: 460px; }
+
+/* ---------- phase 4: marketing ---------- */
+.pill.review-pending  { background: #fdf0d9; color: #7a5410; }
+.pill.review-sent     { background: #e8eefc; color: #24408c; }
+.pill.review-received { background: #e0f3e6; color: #14603f; }
+.pill.review-declined { background: #e6e9ec; color: #3d4855; }

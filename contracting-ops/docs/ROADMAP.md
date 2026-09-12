@@ -1,8 +1,7 @@
 # Roadmap
 
-Phases 1, 2 and 3 are built. Phase 4 is deliberately not. The shipped sections
-are kept as a record of what was specified against what was built; the phase 4
-section is the live specification, along with the trigger for starting it.
+All four phases are built. These sections are kept as a record of what was
+specified against what shipped.
 
 The sequencing rule is that **each phase has to be independently useful**. Phase
 2 is worth running even if phase 3 never gets built. That is what makes it safe
@@ -273,5 +272,5 @@ When that happens, the sketch is:
 - Cost per acquired job, using phase 2's overhead expenses.
 
 The single most valuable piece is referral tracking, because for a contractor
-booked by word of mouth, that is where the work actually comes from. Build that
-first and stop if it is enough.
+booked by word of mouth, that is where the work actually comes from — so it is
+the part to keep filling in even if nothing else here gets used.

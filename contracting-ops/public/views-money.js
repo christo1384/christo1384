@@ -4,6 +4,7 @@ import {
   openForm, openLightbox, toast, attempt, refresh, today, state,
 } from './ui.js';
 import { invoicesView } from './views-invoices.js';
+import { marketingPanel, wireMarketing } from './views-marketing.js';
 
 const CATEGORIES = ['materials', 'labor', 'subcontractor', 'permit', 'rental', 'fuel', 'other'];
 const METHODS = ['card', 'check', 'cash', 'ach'];
@@ -51,7 +52,9 @@ async function uploadReceipt(expenseId, file) {
 /* ----------------------------- expense form ---------------------------- */
 
 async function expenseFields(values = {}) {
-  const [jobs, vendors] = await Promise.all([get('/api/jobs'), get('/api/vendors')]);
+  const [jobs, vendors, campaigns] = await Promise.all([
+    get('/api/jobs'), get('/api/vendors'), get('/api/campaigns').catch(() => []),
+  ]);
   return [
     { name: 'spent_on', label: 'Date', type: 'date', value: values.spent_on ?? today(), required: true },
     { name: 'amount', label: 'Amount', inputmode: 'decimal', required: true,
@@ -71,6 +74,10 @@ async function expenseFields(values = {}) {
       value: values.tax_cents ? (values.tax_cents / 100).toFixed(2) : '' },
     { name: 'billable', label: 'Billable to the client', type: 'checkbox',
       value: values.billable === undefined ? true : values.billable },
+    { name: 'campaign_id', label: 'Marketing campaign', type: 'select', value: values.campaign_id ?? '',
+      hint: 'Only for money spent chasing work, so the campaign can be costed.',
+      options: [{ value: '', label: '\u2014 Not marketing \u2014' }]
+        .concat(campaigns.map((c) => ({ value: c.id, label: c.name }))) },
   ];
 }
 
@@ -271,6 +278,19 @@ async function editBudget(jobId) {
 /* ------------------------------- reports ------------------------------ */
 
 export async function reportsView(params) {
+  const tab = params.get('tab') || 'business';
+  const view = document.getElementById('view');
+  const subTab = (label, value) => `<a class="btn btn-sm${tab === value ? ' btn-primary' : ''}"
+    href="#/reports?tab=${value}">${esc(label)}</a>`;
+  const tabs = `<div class="row" style="margin-bottom:14px">
+    ${subTab('Business', 'business')}${subTab('Spend', 'spend')}${subTab('Marketing', 'marketing')}</div>`;
+
+  if (tab === 'marketing') {
+    view.innerHTML = `<div class="page-head"><h1>Reports</h1></div>${tabs}${await marketingPanel()}`;
+    wireMarketing(view, () => reportsView(params));
+    return;
+  }
+
   const from = params.get('from') || '';
   const to = params.get('to') || '';
   const query = new URLSearchParams();
@@ -282,7 +302,7 @@ export async function reportsView(params) {
   ]);
 
   const rangeChip = (label, months) => {
-    const next = new URLSearchParams();
+    const next = new URLSearchParams({ tab: 'spend' });
     if (months) {
       const start = new Date();
       start.setMonth(start.getMonth() - months);
@@ -342,12 +362,16 @@ export async function reportsView(params) {
           : `${money(j.margin_cents)}${j.margin_percent === null ? '' : ` (${j.margin_percent}%)`}`}</td>
       </tr>`).join('')}</tbody></table>`, { flush: true })}</div>` : ''}`;
 
-  document.getElementById('view').innerHTML = `
+  if (tab === 'business') {
+    view.innerHTML = `<div class="page-head"><h1>Reports</h1></div>${tabs}${executive}`;
+    return;
+  }
+
+  view.innerHTML = `
     <div class="page-head"><h1>Reports</h1>
       <span class="muted">${money(report.total_cents)} spent${from ? ` since ${fmtDate(from)}` : ''}</span>
     </div>
-    ${executive}
-    <h2 style="margin:24px 0 12px">Spend</h2>
+    ${tabs}
     <div class="row" style="margin-bottom:12px">
       ${rangeChip('All time', 0)}${rangeChip('Last 3 months', 3)}${rangeChip('Last 12 months', 12)}
     </div>

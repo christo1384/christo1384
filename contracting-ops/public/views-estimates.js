@@ -83,11 +83,11 @@ export async function estimateView(id) {
   </tr>`;
 
   const linesTable = estimate.lines.length
-    ? `<table class="table lines">
+    ? `<div class="scroll-x"><table class="table lines">
         <thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Unit</th>
           <th class="num">Total</th>${editable ? '<th></th>' : ''}</tr></thead>
         <tbody>${estimate.lines.map(lineRow).join('')}</tbody>
-      </table>`
+      </table></div>`
     : '<p class="empty">No lines yet. Add the first one below.</p>';
 
   const actions = editable

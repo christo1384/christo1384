@@ -3,6 +3,7 @@ import {
   requiredText, optionalText, optionalEnum, requiredEnum, optionalDate, optionalId, pathId, buildPatch,
 } from '../lib/validate.js';
 import { transaction } from '../db.js';
+import { openRequestOnCompletion } from './marketing.js';
 import {
   STATUS_KEYS, PRIORITIES, canTransition, allowedNext, statusLabel, groupKeys,
 } from '../lib/workflow.js';
@@ -150,6 +151,11 @@ export function registerJobRoutes(router, db) {
         `INSERT INTO job_events (job_id, kind, from_status, to_status, body, author)
          VALUES (?, 'status_change', ?, ?, ?, ?)`,
       ).run(id, from, to, optionalText(body, 'note') ?? null, author(body, user));
+
+      // Finishing a job is the moment to ask for a review, and the moment it
+      // is most likely to be forgotten.
+      if (to === 'complete' && from !== 'complete') openRequestOnCompletion(db, existing);
+
       return getJob(db, id);
     });
 

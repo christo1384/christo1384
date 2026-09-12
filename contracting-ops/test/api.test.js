@@ -220,7 +220,7 @@ describe('dashboard', () => {
 
 describe('plumbing', () => {
   test('reports health and workflow metadata', async () => {
-    assert.deepEqual((await api('GET', '/api/health')).body, { ok: true, phase: 3 });
+    assert.deepEqual((await api('GET', '/api/health')).body, { ok: true, phase: 4 });
     const meta = await api('GET', '/api/meta');
     assert.equal(meta.body.statuses.length, 8);
     assert.deepEqual(meta.body.priorities, ['low', 'normal', 'high']);

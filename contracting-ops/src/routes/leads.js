@@ -1,6 +1,6 @@
 import { sendJson, readJson, notFound, badRequest } from '../lib/http.js';
 import {
-  requiredText, optionalText, optionalEnum, requiredEnum, optionalDate, pathId, buildPatch,
+  requiredText, optionalText, optionalEnum, requiredEnum, optionalDate, optionalId, pathId, buildPatch,
 } from '../lib/validate.js';
 import { transaction } from '../db.js';
 import { statusLabel } from '../lib/workflow.js';
@@ -24,8 +24,12 @@ export function registerLeadRoutes(router, db) {
     if (query.get('open') === '1') where.push("l.status IN ('new', 'contacted', 'qualified')");
 
     const rows = db.prepare(
-      `SELECT l.*, j.job_number, j.title AS job_title
-         FROM leads l LEFT JOIN jobs j ON j.id = l.converted_job_id
+      `SELECT l.*, j.job_number, j.title AS job_title,
+              cm.name AS campaign_name, rc.name AS referred_by_name
+         FROM leads l
+         LEFT JOIN jobs j ON j.id = l.converted_job_id
+         LEFT JOIN campaigns cm ON cm.id = l.campaign_id
+         LEFT JOIN clients rc ON rc.id = l.referred_by_client_id
         ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
         ORDER BY CASE l.status WHEN 'new' THEN 0 WHEN 'contacted' THEN 1 WHEN 'qualified' THEN 2 ELSE 3 END,
                  l.received_on DESC, l.id DESC`,
@@ -39,9 +43,19 @@ export function registerLeadRoutes(router, db) {
 
   router.post('/api/leads', async (req, res, { user }) => {
     const body = await readJson(req);
+    const campaignId = optionalId(body, 'campaign_id') ?? null;
+    if (campaignId && !db.prepare('SELECT 1 FROM campaigns WHERE id = ?').get(campaignId)) {
+      throw badRequest('campaign_id does not match a campaign');
+    }
+    const referrerId = optionalId(body, 'referred_by_client_id') ?? null;
+    if (referrerId && !db.prepare('SELECT 1 FROM clients WHERE id = ?').get(referrerId)) {
+      throw badRequest('referred_by_client_id does not match a client');
+    }
+
     const info = db.prepare(
-      `INSERT INTO leads (name, phone, email, source, description, received_on, status, created_by)
-       VALUES (?, ?, ?, ?, ?, COALESCE(?, date('now')), ?, ?)`,
+      `INSERT INTO leads (name, phone, email, source, description, received_on, status, created_by,
+                          campaign_id, referred_by_client_id)
+       VALUES (?, ?, ?, ?, ?, COALESCE(?, date('now')), ?, ?, ?, ?)`,
     ).run(
       requiredText(body, 'name', { max: 200 }),
       optionalText(body, 'phone', { max: 60 }) ?? null,
@@ -51,6 +65,8 @@ export function registerLeadRoutes(router, db) {
       optionalDate(body, 'received_on') ?? null,
       optionalEnum(body, 'status', LEAD_STATUSES) ?? 'new',
       user?.id ?? null,
+      campaignId,
+      referrerId,
     );
     sendJson(res, 201, getLead(db, Number(info.lastInsertRowid)));
   });
@@ -83,6 +99,8 @@ export function registerLeadRoutes(router, db) {
       received_on: optionalDate(body, 'received_on'),
       status: 'status' in body ? requiredEnum(body, 'status', LEAD_STATUSES) : undefined,
       lost_reason: optionalText(body, 'lost_reason', { max: 500 }),
+      campaign_id: optionalId(body, 'campaign_id'),
+      referred_by_client_id: optionalId(body, 'referred_by_client_id'),
     });
 
     if (columns.length) {
@@ -163,7 +181,12 @@ export function registerLeadRoutes(router, db) {
 
 function getLead(db, id) {
   return db.prepare(
-    `SELECT l.*, j.job_number, j.title AS job_title
-       FROM leads l LEFT JOIN jobs j ON j.id = l.converted_job_id WHERE l.id = ?`,
+    `SELECT l.*, j.job_number, j.title AS job_title,
+            cm.name AS campaign_name, rc.name AS referred_by_name
+       FROM leads l
+       LEFT JOIN jobs j ON j.id = l.converted_job_id
+       LEFT JOIN campaigns cm ON cm.id = l.campaign_id
+       LEFT JOIN clients rc ON rc.id = l.referred_by_client_id
+      WHERE l.id = ?`,
   ).get(id) ?? null;
 }

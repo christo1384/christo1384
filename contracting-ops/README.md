@@ -12,10 +12,10 @@ rather than waiting for the whole system:
 | **1** | Jobs and their status — clients, the job lifecycle, a timeline per job, a dashboard of what needs attention | **Built and working** |
 | **2** | Financials — accounts, receipts, expense tracking, job costing, budget vs. actual, spend reports | **Built and working** |
 | **3** | Executive + operations — leads, estimates, invoicing, payments, job photos, business reporting | **Built and working** |
-| 4 | Marketing — referral tracking, review requests, campaign attribution | Deferred (booked solid) |
+| **4** | Marketing — referral tracking, review requests, campaign attribution | **Built and working** |
 
-Phase 4 is specified in [`docs/ROADMAP.md`](docs/ROADMAP.md), along with the
-written trigger for revisiting it.
+All four phases are built. [`docs/ROADMAP.md`](docs/ROADMAP.md) keeps the
+original specifications alongside what actually shipped.
 
 It runs on a Linux box at home and is used from a phone on the same wifi.
 [`docs/DEPLOY.md`](docs/DEPLOY.md) is the full setup: service, fixed address,
@@ -159,6 +159,30 @@ finished jobs make money.
 
 ---
 
+## Phase 4: what it does
+
+Built out of order on request — the pipeline trigger that was meant to start
+this phase has not fired, so treat it as instrumentation that will pay off later
+rather than something to act on this month.
+
+**Referral tracking.** Every lead can record who sent them. The Marketing tab
+then ranks past clients by the value of the work they have sent, which for a
+business booked by word of mouth is the most useful number in the system.
+
+**Campaigns and what they cost.** Name a campaign (truck lettering, a
+sponsorship, yard signs), tag the expenses that paid for it, and point leads at
+it. Each campaign then shows spend, leads, jobs won, cost per win and a return
+multiple against the contract value of the work it produced.
+
+**Review requests.** Completing a job automatically queues a request — the
+moment it is most likely to be forgotten. The queue writes the message and hands
+it to the phone's own mail or messages app; it does **not** send anything
+itself, because that would mean a household tool holding mail or SMS
+credentials. Asking, answering and the star rating are tracked, and the same job
+can never be queued twice.
+
+---
+
 ## API
 
 All responses are JSON. Errors return `{ "error": "...", "details": { ... } }`.
@@ -218,6 +242,20 @@ Phase 3:
 | `PATCH` `DELETE` | `/api/photos/:id` | Re-stage, re-caption or delete |
 | `GET` | `/api/reports/executive` | Win rate, backlog, receivables, finished-job margin |
 
+Phase 4:
+
+| Method | Path | Purpose |
+| ------ | ---- | ------- |
+| `GET` `POST` | `/api/campaigns` | Campaigns with spend, leads, wins and return |
+| `GET` `PATCH` `DELETE` | `/api/campaigns/:id` | One campaign and its leads |
+| `GET` | `/api/review-requests` | The review queue (filter `status`) |
+| `POST` | `/api/jobs/:id/review-request` | Queue one by hand |
+| `PATCH` | `/api/review-requests/:id` | Asked, answered, rating — dates stamped for you |
+| `GET` | `/api/reports/marketing` | Campaign returns, referral leaderboard, review funnel |
+
+Leads take `campaign_id` and `referred_by_client_id`; expenses take
+`campaign_id` so a campaign can be costed from money already recorded once.
+
 Amounts are sent as dollars (`"1,240.55"`, `1240.55` or `"1240"`) and always
 come back as integer cents (`amount_cents`). Improperly grouped input like
 `"1,2,3"` is refused rather than silently reinterpreted.
@@ -253,8 +291,8 @@ src/
     money.js           dollars to whole cents, no floats
     auth.js            scrypt hashing, sessions, login throttling
     uploads.js         streamed uploads with magic-byte type checks
-  routes/              auth, clients, jobs, dashboard, expenses,
-                       leads, estimates, invoices, photos, executive
+  routes/              auth, clients, jobs, dashboard, expenses, leads,
+                       estimates, invoices, photos, executive, marketing
 public/
   app.js               router and boot
   ui.js                fetch wrapper, formatting, cards, modal form
@@ -264,6 +302,7 @@ public/
   views-estimates.js   the estimate builder
   views-invoices.js    invoices, payments, receivables
   views-photos.js      the job photo gallery
+  views-marketing.js   campaigns, referrals, the review queue
   views-auth.js        sign-in and the account menu
 bin/                   user.js, backup.sh, make-icons.js
 deploy/                systemd service + nightly backup timer
@@ -296,7 +335,7 @@ Deliberate choices worth knowing before you extend it:
 npm test
 ```
 
-77 tests across three suites.
+90 tests across four suites.
 
 `test/api.test.js` (phase 1) covers client and job CRUD, every legal transition
 in sequence, rejection of illegal ones (and that a rejected move leaves no
@@ -319,6 +358,14 @@ overpayment and paying an unsent invoice are refused, that a job with invoices
 cannot be deleted, photo staging and the PDF refusal leaving nothing on disk,
 and that the executive report's aging buckets account for every outstanding
 cent.
+
+`test/marketing.test.js` (phase 4) covers campaign attribution arithmetic (only
+tagged spend counts; cost per lead, cost per win and return multiple), that
+deleting a campaign keeps its leads and spend, the referral leaderboard crediting
+the right client, a review request opening automatically when a job completes
+and never twice for the same job, the status dates being stamped rather than
+typed, rating bounds, and a fresh install reporting nulls instead of dividing by
+zero.
 
 ## Security posture
 

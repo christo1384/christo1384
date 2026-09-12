@@ -71,7 +71,11 @@ export async function leadsView(params) {
   document.getElementById('new-lead').addEventListener('click', () => newLead());
 }
 
-function leadFields(values = {}) {
+async function leadFields(values = {}) {
+  const [campaigns, clients] = await Promise.all([
+    get('/api/campaigns').catch(() => []),
+    get('/api/clients').catch(() => []),
+  ]);
   return [
     { name: 'name', label: 'Who called?', required: true, value: values.name ?? '' },
     { name: 'phone', label: 'Phone', type: 'tel', value: values.phone ?? '' },
@@ -81,11 +85,19 @@ function leadFields(values = {}) {
         .concat((state.meta.lead_sources ?? []).map((s) => ({ value: s, label: titleCase(s) }))) },
     { name: 'description', label: 'What do they want?', type: 'textarea', value: values.description ?? '' },
     { name: 'received_on', label: 'Date', type: 'date', value: values.received_on ?? today() },
+    { name: 'referred_by_client_id', label: 'Who sent them?', type: 'select',
+      value: values.referred_by_client_id ?? '',
+      hint: 'The single most useful field here: it shows who keeps you booked.',
+      options: [{ value: '', label: '\u2014 Nobody in particular \u2014' }]
+        .concat(clients.map((c) => ({ value: c.id, label: c.name }))) },
+    { name: 'campaign_id', label: 'Campaign', type: 'select', value: values.campaign_id ?? '',
+      options: [{ value: '', label: '\u2014 None \u2014' }]
+        .concat(campaigns.map((c) => ({ value: c.id, label: c.name }))) },
   ];
 }
 
 export async function newLead() {
-  const form = await openForm({ title: 'New lead', submitLabel: 'Save lead', fields: leadFields() });
+  const form = await openForm({ title: 'New lead', submitLabel: 'Save lead', fields: await leadFields() });
   if (!form) return;
   await attempt(() => api('POST', '/api/leads', form), 'Lead saved');
 }
@@ -93,7 +105,7 @@ export async function newLead() {
 async function editLead(lead) {
   const form = await openForm({
     title: 'Edit lead',
-    fields: leadFields(lead).concat([
+    fields: (await leadFields(lead)).concat([
       { name: 'status', label: 'Status', type: 'select', value: lead.status,
         options: (state.meta.lead_statuses ?? [])
           .filter((s) => s !== 'converted' || lead.status === 'converted')

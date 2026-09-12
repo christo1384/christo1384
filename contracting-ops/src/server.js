@@ -19,6 +19,7 @@ import { registerEstimateRoutes } from './routes/estimates.js';
 import { registerInvoiceRoutes } from './routes/invoices.js';
 import { registerPhotoRoutes } from './routes/photos.js';
 import { registerExecutiveRoutes } from './routes/executive.js';
+import { registerMarketingRoutes } from './routes/marketing.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(here, '..', 'public');
@@ -67,7 +68,8 @@ export function createApp({ dbFile = DEFAULT_DB, dataDir = DATA_DIR, tls = null,
   registerInvoiceRoutes(router, db);
   registerPhotoRoutes(router, db, { uploadDir });
   registerExecutiveRoutes(router, db);
-  router.get('/api/health', (req, res) => sendJson(res, 200, { ok: true, phase: 3 }));
+  registerMarketingRoutes(router, db);
+  router.get('/api/health', (req, res) => sendJson(res, 200, { ok: true, phase: 4 }));
 
   const handler = async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
@@ -147,7 +149,7 @@ if (isMain) {
 
   server.listen(port, host, () => {
     const scheme = tls ? 'https' : 'http';
-    console.log(`Contracting Ops (phase 3) listening on ${host}:${port}`);
+    console.log(`Contracting Ops (phase 4) listening on ${host}:${port}`);
     console.log(`  this box:   ${scheme}://localhost:${port}`);
     for (const address of lanAddresses()) console.log(`  your phone: ${scheme}://${address}:${port}`);
     if (!tls && host !== '127.0.0.1') {
