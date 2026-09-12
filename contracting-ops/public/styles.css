@@ -308,3 +308,9 @@ a.tile:hover { background: var(--surface-2); }
 .pill.review-sent     { background: #e8eefc; color: #24408c; }
 .pill.review-received { background: #e0f3e6; color: #14603f; }
 .pill.review-declined { background: #e6e9ec; color: #3d4855; }
+
+/* Report tables put two nowrap number columns next to a text column, which can
+   push past a narrow phone. Tightening the gutters buys back the room. */
+@media (max-width: 480px) {
+  .table td, .table.lines th { padding-left: 10px; padding-right: 10px; }
+}
