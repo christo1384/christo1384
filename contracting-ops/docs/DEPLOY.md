@@ -3,11 +3,16 @@
 Phase 2 is meant to live on a Linux machine at home and be used from a phone
 on the same wifi. This is the whole setup.
 
-**Read this first:** the app has a login, but on a home network it serves plain
-HTTP, so passwords and receipts cross the wifi unencrypted. That is a reasonable
-trade for a household LAN. It is **not** reasonable on public wifi, and this
-should never be port-forwarded to the internet. See [Do not expose
-it](#do-not-expose-it-to-the-internet) and [HTTPS](#optional-https-on-the-lan).
+**If the box and the phone are both on Tailscale, use that** — skip to
+[Serving it over Tailscale](#serving-it-over-tailscale). It is strictly better
+than the LAN setup below: real HTTPS with a valid certificate, no firewall
+rules, nothing listening outside the machine, and it keeps working from a job
+site instead of only at home.
+
+The LAN setup in steps 2-6 is the fallback when there is no Tailscale. It serves
+plain HTTP, so passwords and receipts cross the wifi unencrypted — a reasonable
+trade on a household network, **not** reasonable on public wifi, and never to be
+port-forwarded to the internet.
 
 ---
 
@@ -145,15 +150,118 @@ No port forwarding, no `0.0.0.0` on a public interface, no putting it behind a
 dynamic-DNS name. It is a small app holding real financial records and there is
 no reason to invite the whole internet to try passwords against it.
 
-If he genuinely needs it from the road, the right answer is a VPN into the home
-network — [Tailscale](https://tailscale.com) takes about ten minutes and gives
-the phone an address on the home network from anywhere, with nothing exposed.
-Then the same `http://192.168.1.42:4000` works away from home.
+If he needs it from the road, the answer is Tailscale, not a port forward — see
+[Serving it over Tailscale](#serving-it-over-tailscale). Nothing is exposed, and
+the same URL works from anywhere.
 
-## Optional: HTTPS on the LAN
+## Serving it over Tailscale
 
-Plain HTTP on a home network is a defensible trade-off. If you would rather
-encrypt it anyway, point the server at a certificate:
+This is the setup to use. Tailscale gives the box a stable name, issues it a
+real certificate, and proxies to the app over the loopback address — so nothing
+is listening on the LAN at all, and the phone gets a plain `https://` URL with
+no warnings.
+
+### 1. Both devices on the tailnet
+
+Install Tailscale on the box and sign in:
+
+```sh
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+tailscale status          # the box and the iPhone should both be listed
+```
+
+The iPhone needs the Tailscale app from the App Store, signed into the same
+account, with the VPN toggle on.
+
+### 2. Turn on MagicDNS and HTTPS certificates
+
+Both live in the admin console under
+[**DNS**](https://login.tailscale.com/admin/dns):
+
+- **MagicDNS** — on.
+- **HTTPS Certificates** — enable.
+
+This is what gives the box a name like `boxname.tailnet-name.ts.net` and lets it
+fetch a real Let's Encrypt certificate for it. Without this step you get an IP
+address and a certificate warning.
+
+### 3. Point the app at the loopback address
+
+Edit the systemd unit so the app is *only* reachable from the machine itself,
+and knows its cookies will travel over HTTPS:
+
+```
+Environment=HOST=127.0.0.1
+Environment=COOKIE_SECURE=1
+```
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl restart contracting-ops
+journalctl -u contracting-ops -n 10
+#   Contracting Ops (phase 4) listening on 127.0.0.1:4000
+#   this machine only - reach it from a phone through a proxy
+```
+
+`COOKIE_SECURE=1` matters: Tailscale terminates the TLS and forwards plain HTTP
+to the app, so the app cannot tell the connection was encrypted. This tells it.
+
+### 4. Put Tailscale in front
+
+```sh
+sudo tailscale serve --bg 4000
+tailscale serve status
+```
+
+That prints the URL to use:
+
+```
+https://boxname.tailnet-name.ts.net (tailnet only)
+|-- / proxy http://127.0.0.1:4000
+```
+
+On older Tailscale (before 1.60) the equivalent is
+`sudo tailscale serve https / http://127.0.0.1:4000`.
+
+`--bg` persists across reboots. `tailscale serve reset` clears it.
+
+**Never use `tailscale funnel`.** Serve keeps this on your tailnet; Funnel
+publishes it to the open internet, which is exactly what this app is not built
+for.
+
+### 5. On the iPhone
+
+Open the `https://boxname.tailnet-name.ts.net` URL in **Safari** — no port, no
+warning, valid padlock. Then Share → **Add to Home Screen**.
+
+It now works on home wifi *and* on cellular from a job site, because the phone
+reaches the box over the tailnet either way.
+
+### What this changes
+
+| | LAN setup | Tailscale Serve |
+| --- | --- | --- |
+| Encryption | none | real certificate, no warnings |
+| Listening on the LAN | port 4000 | nothing |
+| Firewall rule needed | yes | no |
+| Works away from home | no | yes |
+| Session cookies | not `Secure` | `Secure` |
+
+The firewall rule from step 4 of the LAN setup can be removed once Serve is
+working — nothing is listening there any more:
+
+```sh
+sudo ufw delete allow from 192.168.1.0/24 to any port 4000 proto tcp
+```
+
+**Tailscale is not a substitute for the app's own login.** Anyone on your tailnet
+can reach the URL; the password is what stops them reading the books. Keep both.
+
+## Optional: HTTPS without Tailscale
+
+If you are on the LAN setup and want encryption anyway, point the server at a
+self-signed certificate:
 
 ```sh
 openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
@@ -161,8 +269,6 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
   -out /opt/contracting-ops/data/cert.pem \
   -subj "/CN=192.168.1.42" -addext "subjectAltName=IP:192.168.1.42"
 ```
-
-Add to the systemd unit:
 
 ```
 Environment=TLS_CERT=/opt/contracting-ops/data/cert.pem
@@ -172,7 +278,7 @@ Environment=TLS_KEY=/opt/contracting-ops/data/key.pem
 Session cookies are marked `Secure` automatically once TLS is on. iOS will warn
 about the self-signed certificate every time unless you install and trust it
 (Settings → General → VPN & Device Management, then Certificate Trust Settings).
-A Tailscale address with its automatic certificate avoids that dance entirely.
+Tailscale avoids this entirely, which is why it is the recommended path.
 
 ## Day-to-day
 
@@ -191,7 +297,10 @@ database step. Take a backup before pulling anyway.
 
 | Symptom | Check |
 | ------- | ----- |
-| Phone cannot reach it | Same wifi? `sudo ufw status`. `curl localhost:4000/api/health` on the box. |
+| Phone cannot reach it (Tailscale) | `tailscale status` on both. `tailscale serve status` on the box. `curl localhost:4000/api/health` on the box. |
+| Certificate warning on the phone | HTTPS Certificates not enabled in the admin console, or you opened the `100.x` address instead of the `.ts.net` name. |
+| Signed out on every page (Tailscale) | `COOKIE_SECURE=1` set but Serve not actually terminating TLS, or the reverse. Check `tailscale serve status`. |
+| Phone cannot reach it (LAN) | Same wifi? `sudo ufw status`. `curl localhost:4000/api/health` on the box. |
 | "Set up" screen reappeared | The database moved or was replaced. `npm run user:list` shows what the app can see. |
 | Receipt upload fails | Over 12 MB, or a file type that is not JPEG/PNG/HEIC/WebP/PDF. |
 | Service will not start | `journalctl -u contracting-ops -n 50`. Usually Node older than 22.5, or `data/` not writable by `ops`. |

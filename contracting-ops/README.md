@@ -17,9 +17,10 @@ rather than waiting for the whole system:
 All four phases are built. [`docs/ROADMAP.md`](docs/ROADMAP.md) keeps the
 original specifications alongside what actually shipped.
 
-It runs on a Linux box at home and is used from a phone on the same wifi.
-[`docs/DEPLOY.md`](docs/DEPLOY.md) is the full setup: service, fixed address,
-firewall, accounts, iPhone home screen, backups.
+It runs on a Linux box at home and is used from a phone.
+[`docs/DEPLOY.md`](docs/DEPLOY.md) is the full setup. If the box and the phone
+are both on Tailscale, use **Tailscale Serve** — real HTTPS, nothing listening
+on the LAN, and it keeps working from a job site rather than only at home.
 
 ---
 
