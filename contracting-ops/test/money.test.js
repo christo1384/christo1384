@@ -1,6 +1,6 @@
 import { test, before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, readdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -386,5 +386,41 @@ describe('optional selects', () => {
   test('an empty status on a job move is refused', async () => {
     const job = (await api('POST', '/api/jobs', { title: 'Status check' })).body;
     assert.equal((await api('POST', `/api/jobs/${job.id}/status`, { status: '' })).status, 400);
+  });
+});
+
+describe('data at rest', () => {
+  test('the database and its directory are owner-only', async () => {
+    // The box may be shared with other services. A world-readable database
+    // would hand any local account the books, the client list and the
+    // password hashes.
+    const { statSync } = await import('node:fs');
+    const mode = (path) => statSync(path).mode & 0o777;
+
+    assert.equal(mode(join(workDir, 'test.db')).toString(8), '600');
+    assert.equal(mode(workDir).toString(8), '700');
+
+    for (const sidecar of ['test.db-wal', 'test.db-shm']) {
+      const path = join(workDir, sidecar);
+      if (existsSync(path)) {
+        assert.equal(mode(path).toString(8), '600', `${sidecar} is readable by others`);
+      }
+    }
+  });
+
+  test('uploaded receipts are owner-only in an owner-only directory', async () => {
+    const { statSync } = await import('node:fs');
+    // Upload here rather than relying on a file an earlier block may have
+    // already deleted.
+    const expense = await api('POST', '/api/expenses',
+      { spent_on: '2026-09-11', amount: '15', category: 'fuel' });
+    const receipt = await upload(`/api/expenses/${expense.body.id}/receipt`, JPEG(320));
+    assert.equal(receipt.status, 201);
+
+    assert.equal((statSync(uploadDir).mode & 0o777).toString(8), '700');
+    assert.equal(
+      (statSync(join(uploadDir, receipt.body.stored_name)).mode & 0o777).toString(8), '600',
+      'a receipt image must not be readable by other accounts on the box',
+    );
   });
 });

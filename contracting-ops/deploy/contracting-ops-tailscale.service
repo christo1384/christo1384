@@ -1,10 +1,15 @@
-# Home box service unit.
-#   sudo cp deploy/contracting-ops.service /etc/systemd/system/
-#   sudo systemctl enable --now contracting-ops
+# Home box service unit, Tailscale Serve variant (recommended).
+# The app listens only on the loopback address; Tailscale terminates TLS with a
+# real certificate and proxies to it, so nothing is exposed on the LAN.
+#
+#   sudo cp deploy/contracting-ops-tailscale.service /etc/systemd/system/contracting-ops.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now contracting-ops
+#   sudo tailscale serve --bg 4000
+#
 # Adjust User and WorkingDirectory to match where you cloned this.
 [Unit]
 Description=Contracting Ops
-After=network-online.target
+After=network-online.target tailscaled.service
 Wants=network-online.target
 
 [Service]
@@ -17,11 +22,14 @@ WorkingDirectory=/opt/contracting-ops
 ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning src/server.js
 Environment=NODE_ENV=production
 Environment=PORT=4000
-Environment=HOST=0.0.0.0
+# Loopback only: Tailscale Serve is the sole way in.
+Environment=HOST=127.0.0.1
+# Serve terminates TLS and forwards plain HTTP, so the app cannot tell the
+# connection was encrypted. This tells it, so session cookies get Secure.
+Environment=COOKIE_SECURE=1
 Restart=always
 RestartSec=5
 
-# The app only ever needs to read its own directory and write data/.
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict

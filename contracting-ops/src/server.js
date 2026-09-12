@@ -151,10 +151,16 @@ if (isMain) {
     const scheme = tls ? 'https' : 'http';
     console.log(`Contracting Ops (phase 4) listening on ${host}:${port}`);
     console.log(`  this box:   ${scheme}://localhost:${port}`);
-    for (const address of lanAddresses()) console.log(`  your phone: ${scheme}://${address}:${port}`);
-    if (!tls && host !== '127.0.0.1') {
-      console.log('  note: serving over plain HTTP. Keep this on your home network only.');
+
+    // Bound to the loopback address, so any LAN address printed would be a lie.
+    if (['127.0.0.1', 'localhost', '::1'].includes(host)) {
+      console.log('  this machine only \u2014 reach it from a phone through a proxy');
+      console.log('  such as Tailscale Serve. See docs/DEPLOY.md.');
+      return;
     }
+
+    for (const address of lanAddresses()) console.log(`  your phone: ${scheme}://${address}:${port}`);
+    if (!tls) console.log('  note: serving over plain HTTP. Keep this on your home network only.');
   });
 
   for (const signal of ['SIGINT', 'SIGTERM']) {
