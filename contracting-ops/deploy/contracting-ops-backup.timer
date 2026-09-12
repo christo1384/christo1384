@@ -1,0 +1,11 @@
+# sudo cp deploy/contracting-ops-backup.{service,timer} /etc/systemd/system/
+# sudo systemctl enable --now contracting-ops-backup.timer
+[Unit]
+Description=Run the Contracting Ops backup nightly
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,21 @@
+{
+  "name": "contracting-ops",
+  "version": "1.0.0",
+  "description": "Backend operations system for a general contracting business. Phase 1: jobs and status. Phase 2: financials.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/server.js",
+    "seed": "node --disable-warning=ExperimentalWarning src/seed.js",
+    "user:add": "node --disable-warning=ExperimentalWarning bin/user.js add",
+    "user:passwd": "node --disable-warning=ExperimentalWarning bin/user.js passwd",
+    "user:list": "node --disable-warning=ExperimentalWarning bin/user.js list",
+    "backup": "bin/backup.sh",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js"
+  },
+  "dependencies": {}
+}

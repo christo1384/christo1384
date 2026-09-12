@@ -1,0 +1,316 @@
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --border: #dfe3e8;
+  --text: #16202c;
+  --muted: #5f6d7e;
+  --accent: #14603f;
+  --accent-text: #ffffff;
+  --danger: #a12a21;
+  --warn-bg: #fdf3e2;
+  --warn-border: #e8c98a;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #11161c;
+    --surface: #1a212a;
+    --surface-2: #222b35;
+    --border: #303b47;
+    --text: #e6ebf1;
+    --muted: #9aa8b8;
+    --accent: #3fa06d;
+    --accent-text: #07170f;
+    --danger: #f08a80;
+    --warn-bg: #2e2618;
+    --warn-border: #6b5626;
+    --shadow: none;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+a { color: inherit; }
+h1, h2, h3 { line-height: 1.25; margin: 0; }
+h1 { font-size: 1.45rem; }
+h2 { font-size: 1.1rem; }
+h3 { font-size: .95rem; }
+
+/* ---------- chrome ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-inner {
+  max-width: 1100px; margin: 0 auto; padding: 10px 16px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.brand { font-weight: 650; text-decoration: none; white-space: nowrap; }
+.brand-mark { margin-right: 4px; }
+.tabs { display: flex; gap: 4px; margin-right: auto; flex-wrap: wrap; }
+.tabs a {
+  padding: 6px 12px; border-radius: 999px; text-decoration: none;
+  color: var(--muted); font-weight: 550; font-size: .9rem;
+}
+.tabs a:hover { background: var(--surface-2); color: var(--text); }
+.tabs a.active { background: var(--accent); color: var(--accent-text); }
+
+.view { max-width: 1100px; margin: 0 auto; padding-block: 20px 64px; padding-inline: 16px; }
+.page-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.page-head .muted { margin-left: auto; }
+
+/* ---------- generic bits ---------- */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.card-head {
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.card-body { padding: 12px 16px; }
+.muted { color: var(--muted); font-size: .85rem; }
+.stack { display: grid; gap: 16px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.empty { padding: 20px 16px; color: var(--muted); text-align: center; }
+
+.btn {
+  font: inherit; font-weight: 550; cursor: pointer;
+  padding: 7px 13px; border-radius: 8px; text-decoration: none;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+}
+.btn:hover { background: var(--surface-2); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-sm { padding: 4px 10px; font-size: .85rem; }
+.btn-danger { color: var(--danger); }
+
+input, select, textarea {
+  font: inherit; width: 100%; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text);
+}
+textarea { min-height: 76px; resize: vertical; }
+label { display: block; font-size: .82rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.field { margin-bottom: 12px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ---------- status pills ---------- */
+.pill {
+  display: inline-block; padding: 2px 9px; border-radius: 999px;
+  font-size: .76rem; font-weight: 650; white-space: nowrap;
+  border: 1px solid transparent;
+}
+.pill.s-lead        { background: #e8eefc; color: #24408c; }
+.pill.s-estimating  { background: #e6f0f6; color: #1e5670; }
+.pill.s-bid_sent    { background: #f3ecfb; color: #57318c; }
+.pill.s-scheduled   { background: #fdf0d9; color: #7a5410; }
+.pill.s-in_progress { background: #e0f3e6; color: #14603f; }
+.pill.s-punch_list  { background: #fdeadf; color: #8a4118; }
+.pill.s-complete    { background: #e6e9ec; color: #3d4855; }
+.pill.s-cancelled   { background: #f7e3e1; color: #8c2b23; }
+@media (prefers-color-scheme: dark) { .pill { filter: brightness(.72) saturate(1.5); color: #fff; } }
+.pill.prio-high { background: transparent; border-color: var(--danger); color: var(--danger); }
+
+/* ---------- dashboard ---------- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.tile { padding: 14px 16px; }
+.tile .n { font-size: 1.8rem; font-weight: 680; letter-spacing: -.02em; }
+.tile .k { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.tile.alert { background: var(--warn-bg); border-color: var(--warn-border); }
+.status-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+.status-strip a { text-decoration: none; }
+.status-strip .count { margin-left: 5px; opacity: .75; }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+
+/* ---------- lists ---------- */
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { border-bottom: 1px solid var(--border); }
+.list li:last-child { border-bottom: 0; }
+.list-link {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  padding: 11px 16px; text-decoration: none;
+}
+.list-link:hover { background: var(--surface-2); }
+.list-link .title { font-weight: 600; }
+.list-link .meta { color: var(--muted); font-size: .83rem; }
+.list-link .right { margin-left: auto; text-align: right; }
+
+/* ---------- job detail ---------- */
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: .9rem; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; }
+.timeline { list-style: none; margin: 0; padding: 0; }
+.timeline li { padding: 11px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; }
+.timeline li:last-child { border-bottom: 0; }
+.timeline .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-top: 7px; flex: none; }
+.timeline .dot.status_change { background: var(--accent); }
+.timeline .dot.created { background: #8a6ad0; }
+.timeline .when { color: var(--muted); font-size: .8rem; }
+
+/* ---------- modal + toast ---------- */
+.modal { border: 1px solid var(--border); border-radius: var(--radius); padding: 0; max-width: 520px; width: calc(100% - 32px); background: var(--surface); color: var(--text); }
+.modal::backdrop { background: rgba(10, 15, 20, .45); }
+.modal form { padding: 18px; }
+.modal h2 { margin-bottom: 14px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 16px 0 0; padding: 0; }
+.form-error { color: var(--danger); font-size: .85rem; margin: 4px 0 0; }
+.toast {
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+  background: var(--text); color: var(--bg); padding: 9px 16px; border-radius: 999px;
+  font-size: .88rem; z-index: 50; max-width: calc(100% - 32px);
+}
+
+@media (max-width: 720px) {
+  .detail-grid, .field-row { grid-template-columns: 1fr; }
+  .topbar-inner { gap: 10px; }
+  #new-job-btn { order: 3; }
+}
+
+/* ---------- phase 2: money ---------- */
+.brand-mark { width: 20px; height: 20px; border-radius: 5px; vertical-align: -4px; margin-right: 4px; }
+.tile { text-decoration: none; color: inherit; display: block; }
+a.tile:hover { background: var(--surface-2); }
+
+.pill.cat { background: var(--surface-2); color: var(--muted); }
+
+.money-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.money-row .k { display: block; font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.money-row .v { font-size: 1.2rem; font-weight: 650; }
+.money-row .v.positive { color: var(--accent); }
+.money-row .v.negative { color: var(--danger); }
+
+.meter { margin-top: 10px; }
+.meter-head { display: flex; justify-content: space-between; gap: 10px; font-size: .87rem; margin-bottom: 4px; }
+.meter-track { height: 7px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.meter-fill { height: 100%; background: var(--accent); border-radius: 999px; }
+.meter-fill.over { background: var(--danger); }
+
+.receipt-chip {
+  font: inherit; font-size: .78rem; font-weight: 600; cursor: pointer;
+  padding: 2px 9px; margin-right: 6px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--muted);
+}
+.receipt-chip:hover { color: var(--text); }
+
+.list-link[data-expense] { cursor: default; }
+.list-link[data-expense]:hover { background: transparent; }
+
+.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.table td { padding: 9px 16px; border-bottom: 1px solid var(--border); }
+.table tr:last-child td { border-bottom: 0; }
+.table td.num { text-align: right; white-space: nowrap; width: 1%; }
+
+.lightbox {
+  border: 0; border-radius: var(--radius); padding: 12px; background: var(--surface);
+  max-width: min(900px, calc(100% - 32px)); max-height: 90vh;
+}
+.lightbox::backdrop { background: rgba(10, 15, 20, .7); }
+.lightbox img { display: block; max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 6px; }
+
+/* ---------- sign in ---------- */
+.signin { max-width: 380px; margin: 8vh auto 0; text-align: center; }
+.signin-mark { width: 56px; height: 56px; border-radius: 14px; margin-bottom: 14px; }
+.signin h1 { margin-bottom: 6px; }
+.signin p.muted { margin: 0 0 18px; }
+.signin .card { text-align: left; }
+.signin .meta { margin: 0 0 4px; }
+
+.field-check label { display: flex; align-items: center; gap: 8px; font-size: .95rem; color: var(--text); font-weight: 500; }
+.field-check input { width: auto; }
+
+/* Keeps the header controls off the notch and the home indicator on iOS. */
+@supports (padding: max(0px)) {
+  .topbar-inner { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .view { padding-bottom: max(64px, env(safe-area-inset-bottom)); }
+}
+
+/* Long descriptions should shrink the text column, not push the buttons onto
+   their own line - that doubled every row's height on a phone. */
+.list-link > span:first-child, .list-link > a:first-child { min-width: 0; flex: 1 1 auto; }
+.list-link .right { flex: 0 0 auto; margin-left: auto; }
+
+.two-col { align-items: start; }
+
+/* ---------- phase 3: leads, estimates, invoices, photos ---------- */
+.pill.lead-new         { background: #e8eefc; color: #24408c; }
+.pill.lead-contacted   { background: #e6f0f6; color: #1e5670; }
+.pill.lead-qualified   { background: #e0f3e6; color: #14603f; }
+.pill.lead-converted   { background: #e6e9ec; color: #3d4855; }
+.pill.lead-lost        { background: #f7e3e1; color: #8c2b23; }
+
+.pill.est-draft    { background: var(--surface-2); color: var(--muted); }
+.pill.est-sent     { background: #fdf0d9; color: #7a5410; }
+.pill.est-accepted { background: #e0f3e6; color: #14603f; }
+.pill.est-declined { background: #f7e3e1; color: #8c2b23; }
+.pill.est-expired  { background: #e6e9ec; color: #3d4855; }
+
+.pill.inv-draft   { background: var(--surface-2); color: var(--muted); }
+.pill.inv-sent    { background: #e8eefc; color: #24408c; }
+.pill.inv-partial { background: #fdf0d9; color: #7a5410; }
+.pill.inv-paid    { background: #e0f3e6; color: #14603f; }
+.pill.inv-void    { background: #e6e9ec; color: #3d4855; }
+.pill.overdue     { background: #f7e3e1; color: #8c2b23; }
+
+.pill.stage-before   { background: #e8eefc; color: #24408c; }
+.pill.stage-progress { background: #fdf0d9; color: #7a5410; }
+.pill.stage-after    { background: #e0f3e6; color: #14603f; }
+.pill.stage-issue    { background: #f7e3e1; color: #8c2b23; }
+
+.notice {
+  background: var(--warn-bg); border: 1px solid var(--warn-border);
+  border-radius: var(--radius); padding: 10px 14px; margin: 0 0 16px; font-size: .9rem;
+}
+
+/* Line-item tables on estimates and invoices. */
+.table.lines th {
+  text-align: left; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--muted); padding: 9px 16px; border-bottom: 1px solid var(--border); font-weight: 650;
+}
+.table.lines th.num, .table.lines td.num { text-align: right; }
+
+.totals { font-size: .95rem; }
+.totals > div { display: flex; justify-content: space-between; gap: 16px; padding: 5px 0; }
+.totals .grand {
+  border-top: 1px solid var(--border); margin-top: 5px; padding-top: 9px;
+  font-size: 1.15rem; font-weight: 680;
+}
+
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.photo { margin: 0; }
+.photo-btn {
+  display: block; width: 100%; padding: 0; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface-2);
+}
+.photo-btn img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.photo figcaption { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: .82rem; }
+.photo figcaption .btn { margin-left: auto; }
+
+/* Line tables are the one thing allowed to scroll sideways; everything else
+   must fit the phone. Grid and flex children default to min-width:auto, which
+   refuses to shrink below their content - so the scroller never engages until
+   every ancestor is allowed to be narrower than what it holds. */
+.stack > *, .two-col > *, .detail-grid > *, .card, .card-body { min-width: 0; }
+.scroll-x { overflow-x: auto; min-width: 0; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.scroll-x .table.lines { min-width: 460px; }
+
+/* ---------- phase 4: marketing ---------- */
+.pill.review-pending  { background: #fdf0d9; color: #7a5410; }
+.pill.review-sent     { background: #e8eefc; color: #24408c; }
+.pill.review-received { background: #e0f3e6; color: #14603f; }
+.pill.review-declined { background: #e6e9ec; color: #3d4855; }
+
+/* Report tables put two nowrap number columns next to a text column, which can
+   push past a narrow phone. Tightening the gutters buys back the room. */
+@media (max-width: 480px) {
+  .table td, .table.lines th { padding-left: 10px; padding-right: 10px; }
+}
