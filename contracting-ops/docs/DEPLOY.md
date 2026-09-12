@@ -25,13 +25,19 @@ curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt-get install -y nodejs
 ```
 
-Then put the app somewhere permanent and give it its own user:
+Then put the app somewhere permanent and give it **its own** user:
 
 ```sh
-sudo useradd --system --home /opt/contracting-ops --shell /usr/sbin/nologin ops
+sudo useradd --system --home /opt/contracting-ops --shell /usr/sbin/nologin contracting-ops
 sudo git clone <your-repo-url> /opt/contracting-ops
-sudo chown -R ops:ops /opt/contracting-ops
+sudo chown -R contracting-ops:contracting-ops /opt/contracting-ops
 ```
+
+The dedicated account matters more than it looks. If another service on this box
+runs as the same user, that service — and anything that compromises it — can read
+`data/ops.db`: the books, the client list and the password hashes. Do not reuse a
+generic `ops` account that something else already uses. See [Sharing the box with
+another app](#sharing-the-box-with-another-app).
 
 There are no dependencies to install. Nothing to build.
 
@@ -45,7 +51,8 @@ systemctl status contracting-ops
 ```
 
 It binds `0.0.0.0:4000` so the phone can reach it. The unit runs the app as the
-`ops` user with a read-only filesystem apart from `data/` and `backups/`.
+`contracting-ops` user with a read-only filesystem apart from `data/` and
+`backups/`.
 
 Check it printed your LAN address:
 
@@ -92,14 +99,14 @@ that screen closes permanently once one account exists.
 Or from the box's terminal:
 
 ```sh
-sudo -u ops npm --prefix /opt/contracting-ops run user:add -- --username mike --name "Mike"
+sudo -u contracting-ops npm --prefix /opt/contracting-ops run user:add -- --username mike --name "Mike"
 ```
 
 Add the second person from **Account → Add another person** in the app, or with
 the same command. Forgotten password:
 
 ```sh
-sudo -u ops npm --prefix /opt/contracting-ops run user:passwd -- --username mike
+sudo -u contracting-ops npm --prefix /opt/contracting-ops run user:passwd -- --username mike
 ```
 
 That also signs that person out everywhere.
@@ -153,6 +160,53 @@ no reason to invite the whole internet to try passwords against it.
 If he needs it from the road, the answer is Tailscale, not a port forward — see
 [Serving it over Tailscale](#serving-it-over-tailscale). Nothing is exposed, and
 the same URL works from anywhere.
+
+## Sharing the box with another app
+
+If this box already runs something else, three things have to be kept apart.
+
+**1. A separate user account.** Not a shared `ops`. The app stores financial
+records; the database and the uploaded receipts are written owner-only (`0600`
+inside a `0700` directory) and a dedicated account is what makes that mean
+anything. Check what a neighbouring service runs as before you pick a name:
+
+```sh
+systemctl show <other-service> -p User
+```
+
+**2. A separate port.** The default is 4000; `PORT=4010` in the unit moves it.
+Check what is already taken:
+
+```sh
+sudo ss -lntp | grep LISTEN
+```
+
+**3. A separate Tailscale entry — and this is the one that bites.** Serve and
+Funnel share a single config on the machine. Whichever app was configured last
+owns the path it claimed, and if the other app used `tailscale funnel`, it owns
+the public hostname on port 443.
+
+Serve and Funnel allow only three HTTPS ports: **443, 8443 and 10000**. So if
+something else already holds 443, put this app on another one:
+
+```sh
+sudo tailscale serve --bg --https=8443 4000
+tailscale serve status
+tailscale funnel status
+```
+
+That gives `https://<machine>.<tailnet>.ts.net:8443`, private to the tailnet,
+alongside whatever holds 443.
+
+**Check `tailscale funnel status` afterwards and make sure this app's port is not
+listed.** Funnel publishes to the open internet. A neighbouring app may
+legitimately be funnelled; this one must not be.
+
+Do not try `--set-path /ops` instead. The app loads `/styles.css`, `/app.js` and
+`/icon-180.png` as root-absolute paths, so under a sub-path the browser asks the
+domain root for them and gets the other app's 404s — an unstyled page with no
+JavaScript. A separate port needs no code change; a sub-path would need a base
+path threaded through the shell and the fetch wrapper.
 
 ## Serving it over Tailscale
 
@@ -286,9 +340,9 @@ Tailscale avoids this entirely, which is why it is the recommended path.
 | ---- | ------- |
 | Restart | `sudo systemctl restart contracting-ops` |
 | Logs | `journalctl -u contracting-ops -f` |
-| Back up now | `sudo -u ops /opt/contracting-ops/bin/backup.sh` |
-| List accounts | `sudo -u ops npm --prefix /opt/contracting-ops run user:list` |
-| Update | `sudo -u ops git -C /opt/contracting-ops pull && sudo systemctl restart contracting-ops` |
+| Back up now | `sudo -u contracting-ops /opt/contracting-ops/bin/backup.sh` |
+| List accounts | `sudo -u contracting-ops npm --prefix /opt/contracting-ops run user:list` |
+| Update | `sudo -u contracting-ops git -C /opt/contracting-ops pull && sudo systemctl restart contracting-ops` |
 
 Migrations run automatically at startup, so an update never needs a manual
 database step. Take a backup before pulling anyway.
@@ -300,6 +354,7 @@ database step. Take a backup before pulling anyway.
 | Phone cannot reach it (Tailscale) | `tailscale status` on both. `tailscale serve status` on the box. `curl localhost:4000/api/health` on the box. |
 | Certificate warning on the phone | HTTPS Certificates not enabled in the admin console, or you opened the `100.x` address instead of the `.ts.net` name. |
 | Signed out on every page (Tailscale) | `COOKIE_SECURE=1` set but Serve not actually terminating TLS, or the reverse. Check `tailscale serve status`. |
+| Another app answers at the tailnet URL | Serve/Funnel config is shared per machine and the other app claimed 443. Put this one on 8443 — see [Sharing the box](#sharing-the-box-with-another-app). |
 | Phone cannot reach it (LAN) | Same wifi? `sudo ufw status`. `curl localhost:4000/api/health` on the box. |
 | "Set up" screen reappeared | The database moved or was replaced. `npm run user:list` shows what the app can see. |
 | Receipt upload fails | Over 12 MB, or a file type that is not JPEG/PNG/HEIC/WebP/PDF. |

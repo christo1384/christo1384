@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import { readdirSync, readFileSync, mkdirSync } from 'node:fs';
+import { readdirSync, readFileSync, mkdirSync, chmodSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,13 +11,36 @@ const MIGRATIONS_DIR = join(here, 'migrations');
  * Migrations are plain .sql files applied in filename order, once each.
  */
 export function openDb(file) {
-  if (file !== ':memory:') mkdirSync(dirname(file), { recursive: true });
+  if (file !== ':memory:') mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
 
   const db = new DatabaseSync(file);
+
+  // SQLite creates the file with the process umask, which is usually 0644 -
+  // readable by every local account. This database holds the books, client
+  // contact details and password hashes, and the box may be shared with other
+  // services, so narrow it before anything is written. Locking it down before
+  // enabling WAL matters: SQLite copies the database file's mode onto the
+  // -wal and -shm files when it creates them.
+  if (file !== ':memory:') restrictPermissions(file);
+
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA foreign_keys = ON');
   runMigrations(db);
   return db;
+}
+
+/** Owner-only on the database, its sidecar files, and the directory holding them. */
+function restrictPermissions(file) {
+  try {
+    chmodSync(dirname(file), 0o700);
+    for (const path of [file, `${file}-wal`, `${file}-shm`, `${file}-journal`]) {
+      if (existsSync(path)) chmodSync(path, 0o600);
+    }
+  } catch (err) {
+    // A database on a filesystem without Unix permissions is not a reason to
+    // refuse to start; say so loudly instead.
+    console.warn(`Could not restrict permissions on ${file}: ${err.message}`);
+  }
 }
 
 function runMigrations(db) {

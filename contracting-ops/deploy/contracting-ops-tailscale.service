@@ -14,8 +14,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=ops
-Group=ops
+# A dedicated account, NOT a shared 'ops' user. Anything else running on
+# this box under the same account could read the books.
+User=contracting-ops
+Group=contracting-ops
 WorkingDirectory=/opt/contracting-ops
 ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning src/server.js
 Environment=NODE_ENV=production
