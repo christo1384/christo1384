@@ -15,8 +15,10 @@
 
 ## The data
 
-The Firestore collection is `items` in the existing `allen-gates-family`
-project, so anything already in there is still there.
+Firebase is gone entirely — no project, no rules, no auth provider. The board's
+own data now lives in Netlify Blobs on the same site. Nothing was migrated out
+of the old Firestore, because the board ran for about ten days and nothing in
+it was worth keeping.
 
 Each document looks like:
 

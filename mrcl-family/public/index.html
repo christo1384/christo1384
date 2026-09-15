@@ -34,25 +34,11 @@
 
       <footer class="tv-footer">
         <span class="status" data-status></span>
+        <span data-calendar-hint hidden>No calendars connected yet</span>
         <span>Add something at <strong data-hint></strong></span>
       </footer>
     </div>
 
-    <div class="setup" data-setup hidden>
-      <h1>Nearly there</h1>
-      <p>
-        This deploy has no Firebase configuration, so there is no family list to show yet.
-        Missing: <span class="missing" data-setup-missing></span>.
-      </p>
-      <ol>
-        <li>In Netlify, open <strong>Site configuration → Environment variables</strong>.</li>
-        <li>
-          Add <code>FIREBASE_CONFIG</code> with the Firebase web config as one line of JSON.
-        </li>
-        <li>Redeploy. Every screen picks it up on its next load — nothing to enter on the device.</li>
-      </ol>
-      <p>The full walkthrough is in <code>docs/DEPLOY.md</code> in the repository.</p>
-    </div>
 
     <script type="module" src="/js/tv.js"></script>
   </body>

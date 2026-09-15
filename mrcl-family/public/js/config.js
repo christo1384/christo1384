@@ -1,9 +1,9 @@
 // Configuration is baked into the deploy, never entered on the device.
 //
-// This is the whole point of the rebuild. The previous version kept the
-// Firebase keys and calendar ids in each browser's localStorage, which is
-// scoped to the exact domain — so renaming the Netlify site silently wiped
-// every TV and phone and each one had to be re-onboarded by hand.
+// This is the whole point of the rebuild. The previous version kept its keys
+// and calendar ids in each browser's localStorage, which is scoped to the
+// exact domain — so renaming the Netlify site silently wiped every TV and
+// phone and each one had to be re-onboarded by hand.
 //
 // Now `npm run build` writes public/config.generated.js from the Netlify
 // environment variables, and every device that loads the page is already
@@ -16,11 +16,18 @@ const DEFAULTS = {
   // 1 = weeks run Monday to Sunday, 0 = Sunday to Saturday.
   weekStartsOn: 1,
 
-  firebase: null,
-  collection: 'items',
-
-  // Read-only ICS feeds merged onto the board. See docs/DEPLOY.md.
+  // The family's own calendars, read-only, merged onto the board. Each entry
+  // is either an ICS URL or { url, category, label }: with no category, each
+  // event picks its own row from its title (see classify.js).
+  //
+  // This is where most of the board's content comes from. The family already
+  // keeps a shared Google Calendar current; asking anyone to retype it into
+  // the board is what killed the previous version.
   calendars: [],
+
+  // Used to pull the person out of an entry, so "Lili Ortho" shows as
+  // "Ortho · Lili" instead of repeating itself.
+  familyNames: [],
 
   weather: {
     enabled: true,
@@ -56,18 +63,14 @@ const injected = (typeof window !== 'undefined' && window.__MRCL__) || {};
 
 export const CONFIG = merge(DEFAULTS, injected);
 
-const REQUIRED_FIREBASE_KEYS = ['apiKey', 'authDomain', 'projectId', 'appId'];
-
-/** True once the deploy carries a usable Firebase project. */
-export function isConfigured(config = CONFIG) {
-  const fb = config.firebase;
-  return isPlainObject(fb) && REQUIRED_FIREBASE_KEYS.every((key) => typeof fb[key] === 'string' && fb[key].length > 0);
-}
-
-/** Which required keys are missing, for the setup message. */
-export function missingFirebaseKeys(config = CONFIG) {
-  const fb = isPlainObject(config.firebase) ? config.firebase : {};
-  return REQUIRED_FIREBASE_KEYS.filter((key) => !fb[key]);
+/**
+ * There is nothing left that has to be configured before the board works: the
+ * store lives on this same site, and a board with no calendars is simply an
+ * empty board you can still add to. This exists so the pages can say something
+ * useful when a deploy has no calendars at all.
+ */
+export function hasCalendars(config = CONFIG) {
+  return Array.isArray(config.calendars) && config.calendars.length > 0;
 }
 
 export { DEFAULTS, merge };

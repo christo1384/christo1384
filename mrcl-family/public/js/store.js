@@ -1,122 +1,121 @@
-// Reading and writing the family list.
+// Talking to the board's own store.
 //
-// The board listens rather than polls, so a phone tapping "Done" greys the
-// item out on the kitchen TV within a second.
+// Firebase is gone: no second console, no auth provider, no rules file, no SDK
+// off a CDN. The board's residual data lives in Netlify Blobs behind
+// /api/board on this same domain.
+//
+// Realtime push is traded for polling. On a kitchen wall that is invisible —
+// and the version this replaces polled every five minutes.
 
-import { CONFIG } from './config.js';
-import { connect } from './firebase.js';
-import { normaliseItem, validateItem } from './item.js';
+import { toISODate } from './week.js';
 
-function itemsRef(api, db) {
-  return api.collection(db, CONFIG.collection);
+const ENDPOINT = '/api/board';
+const POLL_MS = 15_000;
+
+async function call(options = {}) {
+  const { method = 'GET', body, query, fetchImpl = globalThis.fetch } = options;
+
+  const url = new URL(ENDPOINT, globalThis.location?.origin || 'http://localhost');
+  for (const [key, value] of Object.entries(query || {})) url.searchParams.set(key, value);
+
+  const response = await fetchImpl(url.pathname + url.search, {
+    method,
+    cache: 'no-store',
+    headers: body ? { 'content-type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `The board said ${response.status}.`);
+  return payload;
 }
 
-// Reasons connect() can fail that the views have a specific message for.
-const CONNECT_ERRORS = new Set(['not-configured', 'sdk-unreachable', 'anonymous-auth-disabled', 'sign-in-failed']);
+/** The Monday (or Sunday) a week is filed under. */
+export function weekKeyFor(days) {
+  return days[0].iso;
+}
 
-function toItem(snapshot) {
-  const data = snapshot.data() || {};
-  return {
-    id: snapshot.id,
-    title: data.title || '',
-    category: data.category || 'note',
-    who: data.who || '',
-    date: data.date || '',
-    time: data.time || '',
-    annual: Boolean(data.annual),
-    done: Boolean(data.done),
-  };
+/** One read of a week: its own items, its ticks, and the annual entries. */
+export function fetchWeek(days, options = {}) {
+  return call({ query: { week: weekKeyFor(days) }, ...options });
 }
 
 /**
- * Watch every item that could appear in `days`: the ones dated inside the
- * week, plus the annual ones (birthdays), which carry a year that has nothing
- * to do with this week.
- *
- * Both are single-field queries, so Firestore needs no composite index.
- *
- * Returns an unsubscribe function. `onError` is called with a short reason
- * rather than a Firebase error object.
+ * Poll a week until the returned function is called.
+ * `onChange` gets { items, ticks, annual } and only fires when something
+ * actually changed, so the board does not re-render every 15 seconds for
+ * nothing.
  */
-export function subscribeToWeek(days, onChange, onError = () => {}) {
-  const first = days[0].iso;
-  const last = days[days.length - 1].iso;
-
-  let dated = [];
-  let annual = [];
+export function subscribeToWeek(days, onChange, onError = () => {}, { intervalMs = POLL_MS } = {}) {
   let stopped = false;
-  const unsubscribers = [];
+  let timer = null;
+  let lastSeen = '';
 
-  const emit = () => {
-    if (!stopped) onChange([...dated, ...annual]);
-  };
-
-  connect()
-    .then(({ db, api }) => {
+  const tick = async () => {
+    if (stopped) return;
+    try {
+      const payload = await fetchWeek(days);
       if (stopped) return;
 
-      unsubscribers.push(
-        api.onSnapshot(
-          api.query(itemsRef(api, db), api.where('date', '>=', first), api.where('date', '<=', last)),
-          (snap) => {
-            dated = snap.docs.map(toItem).filter((item) => !item.annual);
-            emit();
-          },
-          (error) => onError(error?.code === 'permission-denied' ? 'permission-denied' : 'read-failed'),
-        ),
-      );
+      const fingerprint = JSON.stringify([payload.items, payload.ticks, payload.annual]);
+      if (fingerprint !== lastSeen) {
+        lastSeen = fingerprint;
+        onChange({ items: payload.items || [], ticks: payload.ticks || {}, annual: payload.annual || [] });
+      }
+      onError('');
+    } catch (error) {
+      if (!stopped) onError(error.message || 'read-failed');
+    } finally {
+      if (!stopped) timer = setTimeout(tick, intervalMs);
+    }
+  };
 
-      unsubscribers.push(
-        api.onSnapshot(
-          api.query(itemsRef(api, db), api.where('annual', '==', true)),
-          (snap) => {
-            annual = snap.docs.map(toItem);
-            emit();
-          },
-          (error) => onError(error?.code === 'permission-denied' ? 'permission-denied' : 'read-failed'),
-        ),
-      );
-    })
-    .catch((error) => onError(CONNECT_ERRORS.has(error?.message) ? error.message : 'connect-failed'));
+  tick();
 
   return () => {
     stopped = true;
-    for (const stop of unsubscribers) stop();
+    if (timer) clearTimeout(timer);
   };
 }
 
-/** Add an item. Throws with the first validation message if it is not valid. */
-export async function addItem(input) {
-  const { ok, value, errors } = validateItem(input);
-  if (!ok) throw new Error(errors[0].message);
-
-  const { db, api } = await connect();
-  const ref = await api.addDoc(itemsRef(api, db), {
-    ...value,
-    createdAt: api.serverTimestamp(),
-    updatedAt: api.serverTimestamp(),
+export async function addItem(input, days) {
+  const payload = await call({
+    method: 'POST',
+    body: { op: 'add', week: weekKeyFor(days), item: input },
   });
-  return ref.id;
+  return payload.id;
 }
 
-/** Replace an item's editable fields. */
-export async function updateItem(id, input) {
-  const { ok, value, errors } = validateItem(input);
-  if (!ok) throw new Error(errors[0].message);
-
-  const { db, api } = await connect();
-  await api.updateDoc(api.doc(db, CONFIG.collection, id), { ...value, updatedAt: api.serverTimestamp() });
+export async function updateItem(id, patch, { days, annual = false } = {}) {
+  await call({
+    method: 'POST',
+    body: { op: 'patch', id, patch, annual, week: days ? weekKeyFor(days) : undefined },
+  });
 }
 
-/** Tick something off, or un-tick it. */
-export async function setDone(id, done) {
-  const { db, api } = await connect();
-  await api.updateDoc(api.doc(db, CONFIG.collection, id), { done: Boolean(done), updatedAt: api.serverTimestamp() });
+export async function deleteItem(id, { days, annual = false } = {}) {
+  await call({
+    method: 'POST',
+    body: { op: 'delete', id, annual, week: days ? weekKeyFor(days) : undefined },
+  });
 }
 
-export async function deleteItem(id) {
-  const { db, api } = await connect();
-  await api.deleteDoc(api.doc(db, CONFIG.collection, id));
+/** Tick off an item the board owns. */
+export function setDone(id, done, context) {
+  return updateItem(id, { done: Boolean(done) }, context);
 }
 
-export { normaliseItem };
+/**
+ * Tick off a calendar event. The calendar is never written to — only the fact
+ * that somebody handled it, stored against the week.
+ */
+export async function setTick(key, done, days) {
+  await call({ method: 'POST', body: { op: 'tick', week: weekKeyFor(days), key, done: Boolean(done) } });
+}
+
+/** A stable per-occurrence key for a calendar event. */
+export function tickKey(item) {
+  return `${item.uid || item.title}|${item.date}`;
+}
+
+export { toISODate };

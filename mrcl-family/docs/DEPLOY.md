@@ -1,63 +1,19 @@
 # Deploying the family week
 
-Everything here is done **once**, by one person. Nobody in the house has to set
-up anything on their own phone — that was the flaw in the previous version.
+Everything here is done **once**, by one person, in **one console**. Nobody in
+the house sets up anything on their own phone — that was the first flaw in the
+previous version.
+
+There is no Firebase, no second account, no auth provider and no rules file.
+The board's store is Netlify Blobs, which is part of the Netlify site itself.
 
 ---
 
-## 1. Firebase
+## 1. Netlify
 
-The app talks to one Firestore database. The existing `allen-gates-family`
-project can be reused as-is; its data carries over.
+### 1a. Connect the repository
 
-### 1a. Turn on Anonymous sign-in
-
-Firebase console → **Authentication** → **Sign-in method** → **Anonymous** →
-enable.
-
-Every device signs in silently on load. Nobody sees a login screen. This exists
-so the security rules can require an authenticated caller and refuse anonymous
-HTTP requests hitting the REST API directly.
-
-> If this is skipped, the board shows: *"Turn on Anonymous sign-in in the
-> Firebase console."*
-
-### 1b. Deploy the security rules
-
-`firebase/firestore.rules` is the file that actually protects the family's data.
-The checks in the app itself only exist to give a friendly error message.
-
-```sh
-firebase deploy --only firestore:rules --project allen-gates-family
-```
-
-Or paste the file into Firebase console → **Firestore Database** → **Rules** →
-**Publish**.
-
-The rules allow reads and writes only to the `items` collection, only from a
-signed-in caller, and only for documents of the right shape (title 1–120
-characters, a known category, a real `YYYY-MM-DD` date, and so on). Everything
-else in the project is closed.
-
-> If `FIRESTORE_COLLECTION` is changed away from `items`, change the match path
-> in the rules to suit.
-
-### 1c. Copy the web config
-
-Firebase console → **Project settings** → **Your apps** → the web app → **SDK
-setup and configuration** → **Config**. You want the object that looks like:
-
-```js
-{ apiKey: "…", authDomain: "…", projectId: "…", storageBucket: "…", messagingSenderId: "…", appId: "…" }
-```
-
----
-
-## 2. Netlify
-
-### 2a. Connect the repository
-
-Netlify picks the settings up from `netlify.toml`; they should already read:
+Netlify reads its settings from `netlify.toml`:
 
 | Setting | Value |
 | --- | --- |
@@ -73,84 +29,117 @@ repository root, so Netlify will not find it on its own. Set:
 | --- | --- |
 | Base directory | `mrcl-family` |
 
-If the project is ever split into its own repository, clear that setting again.
+If the project is ever split into its own repository, clear that setting.
 
-> The existing `mrcl-family` site is a **drag-and-drop deploy** (Netlify records
+> The original `mrcl-family` site is a **drag-and-drop deploy** (Netlify records
 > it as `deploy_source: drop`), so it has no repository attached and no build
-> step at all. Connecting it to git is a one-off in the Netlify UI:
-> **Site configuration → Build & deploy → Link repository**.
+> step. Connecting it to git is a one-off: **Site configuration → Build &
+> deploy → Link repository**. Linking is also the only way to deploy without
+> direct network access to `api.netlify.com`.
 
-### 2b. Set the environment variables
+### 1b. Deploy
 
-**Site configuration → Environment variables.** Only the first one is required.
+Trigger a deploy. Netlify Blobs needs no setup at all — the store exists as
+soon as the site does. The build log should say:
+
+```
+[build-config] wrote public/config.generated.js (1 calendar feed(s), 3 family name(s))
+```
+
+**At this point the board already works.** It will be empty, because nothing is
+feeding it yet. That is step 2.
+
+---
+
+## 2. Connect the family calendar
+
+This is the step that decides whether the board survives. A board you have to
+hand-feed from texts, email and your calendar is a second place to type
+everything, and it will be abandoned in a fortnight. A board that renders the
+calendar you already keep costs nothing to maintain.
+
+### 2a. Get the feed address
+
+In Google Calendar, for each calendar you want on the board:
+
+**Settings → (the calendar) → Integrate calendar → Secret address in iCal
+format.** Copy that URL.
+
+Calendars worth connecting:
+
+| Calendar | What it gives the board |
+| --- | --- |
+| **MRCL Family Calendar** | Nearly everything — this is the one that matters |
+| **Holidays in New Zealand** | Public holidays |
+| The school's Google Classroom calendar | Term dates, teacher-only days |
+
+### 2b. Set it in Netlify
+
+**Site configuration → Environment variables.**
 
 | Variable | Required | What it is |
 | --- | --- | --- |
-| `FIREBASE_CONFIG` | **yes** | The config object from step 1c, as one line of **JSON** |
-| `CALENDAR_ICS_URLS` | no | Calendar feeds, comma or newline separated (see below) |
+| `CALENDAR_ICS_URLS` | strongly recommended | Feed addresses, comma or newline separated |
+| `FAMILY_NAMES` | recommended | e.g. `Lili,Ruby,Max` — used to pull the person out of an entry |
 | `BOARD_TITLE` | no | Defaults to `The MRCL family Week` |
 | `WEEK_STARTS_ON` | no | `1` for Monday (default), `0` for Sunday |
 | `WEATHER_LATITUDE` / `WEATHER_LONGITUDE` | no | Defaults to Ōtāhuhu |
 | `WEATHER_TIMEZONE` | no | Defaults to `Pacific/Auckland` |
 | `WEATHER_ENABLED` | no | `false` hides the weather strip |
-| `FIRESTORE_COLLECTION` | no | Defaults to `items` |
 
-`FIREBASE_CONFIG` must be **valid JSON**, so every key needs quotes — which the
-snippet Firebase shows you does not have. It should look like this, all on one
-line:
+> A secret iCal address grants read access to that calendar to anyone holding
+> it, so treat these like passwords. `netlify/functions/calendar.mjs` only
+> fetches URLs on this list, so the endpoint cannot be pointed anywhere else.
 
-```json
-{"apiKey":"…","authDomain":"…","projectId":"…","storageBucket":"…","messagingSenderId":"…","appId":"…"}
-```
+Redeploy after changing any of these — they are read at build time.
 
-If JSON is awkward, set the six individual variables instead and leave
-`FIREBASE_CONFIG` unset: `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`,
-`FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`,
-`FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`.
-
-### 2c. Let secrets scanning through
+### 2b-i. Let secrets scanning through
 
 **Without this, the build fails.** Netlify scans the deployed files for the
-values of environment variables and fails the deploy if it finds one. This app
-puts `FIREBASE_CONFIG` into `public/config.generated.js` deliberately — that is
-the whole mechanism — so the scanner has to be told it is expected:
+values of environment variables and rejects the deploy if it finds one. The
+calendar addresses end up in `public/config.generated.js` by design — that is
+how a device is configured without anyone typing anything — so the scanner has
+to be told they are expected:
 
 | Variable | Value |
 | --- | --- |
-| `SECRETS_SCAN_OMIT_KEYS` | `FIREBASE_CONFIG,FIREBASE_API_KEY,FIREBASE_AUTH_DOMAIN,FIREBASE_PROJECT_ID,FIREBASE_STORAGE_BUCKET,FIREBASE_MESSAGING_SENDER_ID,FIREBASE_APP_ID` |
+| `SECRETS_SCAN_OMIT_KEYS` | `CALENDAR_ICS_URLS,FAMILY_NAMES` |
 
-Do **not** mark `FIREBASE_CONFIG` itself as a "secret" variable in Netlify.
-Secret variables are withheld from the deployed output, which is precisely
-where this one has to end up. A Firebase web config is a public client
-identifier, not a credential; what protects the data is step 1b plus step 1a.
+Do **not** mark `CALENDAR_ICS_URLS` as a "secret" variable in Netlify: secret
+variables are withheld from the deployed output, which is exactly where this
+one has to end up.
 
 If a deploy fails with *"Secrets scanning found secrets in build output"*, this
 is the variable that is missing.
 
-### 2d. Deploy
+### 2c. How entries find their row
 
-Trigger a deploy. The build log should say:
+Nobody has to label anything. An entry picks its row from its own title:
 
-```
-[build-config] wrote public/config.generated.js (Firebase from environment, 0 calendar feed(s))
-```
+| Calendar entry | Row | Shows as |
+| --- | --- | --- |
+| `Lili Ortho 8.20am` | Appointments | Ortho · Lili |
+| `Soccer practice` | Sports | Soccer practice |
+| `Family outing: Auckland Zoo` | Family activity | Auckland Zoo |
+| `Bins out` | Chore | Bins out |
 
-If it says `Firebase from nothing`, the environment variable has not been
-picked up and the site will show its setup message.
+To force a row, prefix the entry: `Dinner: lasagne`, `Note: soccer cancelled`,
+`Chore - mow lawns`. To pin a whole feed to one row, use the JSON form:
 
----
-
-### 2e. Deploying without a git link
-
-If the site is not connected to a repository, deploy from a clone instead:
-
-```sh
-cd mrcl-family
-npx netlify-cli deploy --build --prod --site <site-id>
+```json
+[{"url":"https://calendar.google.com/…/basic.ics","category":"sport","label":"Ruby"}]
 ```
 
-This needs direct network access to `api.netlify.com`, which some sandboxed
-environments block.
+The keyword lists live in `public/js/classify.js` and are easy to extend.
+
+Repeating events are expanded (daily, weekly with `BYDAY`, monthly, yearly,
+with `INTERVAL`, `COUNT`, `UNTIL` and `EXDATE`). Times carrying a `TZID` are
+read as local time, which is correct while the calendar and the screen share a
+timezone.
+
+Calendar entries are read-only on the board: they can be **ticked off** — which
+is recorded against the week, not the calendar — but not edited or deleted
+there. The calendar stays the single source of truth.
 
 ---
 
@@ -161,64 +150,36 @@ rolls over at midnight on its own, and reloads at 3am so a new deploy is picked
 up overnight.
 
 **Everyone's phone:** open `/add`, then Share → *Add to Home Screen* (iPhone) or
-⋮ → *Add to Home screen* (Android). That is the entire setup. No gear icon, no
-keys, nothing to paste.
+⋮ → *Add to Home screen* (Android). That is the entire setup.
 
-The previous version's URLs are redirected, so nothing has to be re-bookmarked:
+The previous version's URLs redirect, so nothing has to be re-bookmarked:
 `/tv-display.html` goes to the board and `/mobile-update.html` to `/add`.
 
 ---
 
-## 4. Calendar feeds (optional)
-
-In Google Calendar → the calendar's **Settings** → **Integrate calendar** →
-**Secret address in iCal format**. Copy that URL.
-
-Set `CALENDAR_ICS_URLS` to one or more of them, comma separated. Those events
-appear on the board as read-only entries — the phone page shows them with a 🗓
-and offers no Edit or Delete, because the calendar owns them.
-
-By default they land in the **Appointments** row. To send a feed somewhere else,
-put JSON in `CALENDAR_ICS_URLS` instead of a plain list:
-
-```json
-[{"url":"https://calendar.google.com/…/basic.ics","category":"sport","label":"Ruby"}]
-```
-
-> Anyone with a secret iCal address can read that calendar, so treat these like
-> passwords. `netlify/functions/calendar.mjs` only ever fetches URLs that are in
-> this list, so the endpoint cannot be pointed at anything else.
-
-Repeating events are expanded (daily, weekly with `BYDAY`, monthly, yearly,
-with `INTERVAL`, `COUNT`, `UNTIL` and `EXDATE`). Times carrying a `TZID` are
-read as local time, which is correct while the calendar and the screen are in
-the same timezone.
-
----
-
-## Optional hardening
+## 4. Optional hardening
 
 ### Content-Security-Policy
 
 Not enabled by default, on purpose: a CSP that is subtly wrong fails silently
 in the browser, which is the exact failure mode that killed the last version.
-Add this to `netlify.toml` under the existing `[[headers]]` block when you can
+Add this under the existing `[[headers]]` block in `netlify.toml` when you can
 open the board straight afterwards and confirm it still loads:
 
 ```toml
-Content-Security-Policy = "default-src 'self'; script-src 'self' https://www.gstatic.com; connect-src 'self' https://*.googleapis.com https://api.open-meteo.com; img-src 'self' data:; style-src 'self'; base-uri 'self'; frame-ancestors 'self'"
+Content-Security-Policy = "default-src 'self'; connect-src 'self' https://api.open-meteo.com; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'self'; frame-ancestors 'self'"
 ```
 
-If the board goes blank after adding it, the browser console will name the
-blocked host; add that host to the matching directive, or remove the header
-again.
+Dropping Firebase makes this much safer than it used to be — there is no
+external script host left to allow.
 
-### Firebase App Check
+### Who can reach the board
 
-App Check ties the Firebase project to your own domains, so the keys are
-useless from anywhere else. Worth doing if the site ever gets a public custom
-domain. It needs a reCAPTCHA site key and a matching change in
-`public/js/firebase.js`.
+The site is unlisted rather than private: anyone with the URL can read and
+write the week. That matched the previous version, and for a family board on an
+obscure address it is usually fine. If you want it locked down, Netlify's
+**Site configuration → Access control → Password protection** is one switch and
+needs no code change.
 
 ---
 
@@ -226,9 +187,9 @@ domain. It needs a reCAPTCHA site key and a matching change in
 
 | What you see | What it means |
 | --- | --- |
-| "This deploy has no Firebase configuration" | `FIREBASE_CONFIG` is not set, or is not valid JSON. Check the build log. |
-| "Turn on Anonymous sign-in…" | Step 1a was skipped. |
-| "Firestore refused the read" | The rules in step 1b are not deployed, or the collection name does not match. |
-| "Could not load Firebase" | The screen has no internet, or something is blocking `gstatic.com`. |
-| Board loads, but is empty | Nothing is on this week yet. Add something from `/add`. |
-| Calendar events missing | Check `CALENDAR_ICS_URLS` matches the feed URL exactly — the proxy only forwards URLs on that list. |
+| "No calendars connected yet" in the footer | `CALENDAR_ICS_URLS` is not set, or the build ran before it was. Redeploy. |
+| Board loads but is empty | Nothing on this week. Check the calendar, or add something from `/add`. |
+| Calendar entries missing | The feed URL must match `CALENDAR_ICS_URLS` exactly — the proxy only forwards URLs on that list. |
+| An entry is in the wrong row | Prefix it (`Dinner: …`) or add the keyword to `public/js/classify.js`. |
+| "The board said 500" | The store call failed. Check the function log in Netlify. |
+| "Too many people editing at once" | Two phones wrote to the same week at the same instant. It retries five times first; just try again. |

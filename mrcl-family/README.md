@@ -27,17 +27,35 @@ The MRCL family Week                              13 – 19 Jul 2026     4:30pm
 
 ## Why it was rebuilt
 
-The previous version kept its Firebase keys and calendar ids in each browser's
-`localStorage`. That storage is scoped to the exact domain, so renaming the
-Netlify site from `preeminent-puppy-76d698` to `mrcl-family` silently wiped
-every device at once. Each TV and phone then had to be re-onboarded by hand —
-open a gear icon, paste a config snippet, paste two calendar lines, save and
-reload. The rollout did not survive that, and the board stopped being used.
+Two things killed the first version, and only one of them was a bug.
 
-**Configuration now lives in the deploy, not on the device.** `npm run build`
+**It lost its own configuration.** The Firebase keys and calendar ids lived in
+each browser's `localStorage`, which is scoped to the exact domain — so
+renaming the Netlify site wiped every device at once, and each TV and phone had
+to be re-onboarded by hand through a gear icon.
+
+**It asked to be hand-fed.** Everything on the board had to be retyped from
+texts, email, the calendar and a to-do list. A board that duplicates what you
+already keep somewhere else is a second place to type everything, and nobody
+maintains that. It lasted ten days.
+
+So this version fixes both:
+
+**Configuration lives in the deploy, not on the device.** `npm run build`
 writes `public/config.generated.js` from the Netlify environment variables, and
-any screen that loads the page is already set up. There is no settings screen,
-nothing to paste, and nothing to lose if the domain changes again.
+any screen that loads the page is already set up. Nothing to paste, nothing to
+lose if the domain changes again.
+
+**The board reads the family's calendar instead of competing with it.** The
+shared Google Calendar is already kept current; the board renders it. An entry
+picks its own row from its title — "Lili Ortho 8.20am" becomes an appointment
+for Lili at 8:20 with nobody configuring anything (`public/js/classify.js`).
+Calendar rows can be ticked off on the board without the calendar ever being
+written to.
+
+What is left over — "home late", what's for dinner — goes in through **one
+box**: `soccer thu 4pm lili`. The six-field form is still there behind "More
+detail", but it is no longer the front door (`public/js/quickadd.js`).
 
 ## What it does
 
@@ -65,15 +83,19 @@ out the age ("Ruby turns 9"), and the entry appears on the right day annually.
 | `public/` | The whole site. Plain ES modules, no bundler, no framework. |
 | `public/js/week.js` | Week and date logic. Pure, and the most tested part. |
 | `public/js/ics.js` | iCalendar reader, including repeating events. |
+| `public/js/classify.js` | Turns a calendar entry into a board row and a person. |
+| `public/js/quickadd.js` | Turns one typed line into an item. |
 | `public/js/item.js` | The shape of an item, and what may be written. |
 | `public/js/config.js` | Defaults, merged with what the build injected. |
+| `netlify/functions/board.mjs` | The board's own store, on Netlify Blobs. |
 | `netlify/functions/calendar.mjs` | Fetches .ics feeds the browser cannot reach. |
-| `firebase/firestore.rules` | The rules that actually enforce access. |
 | `tools/build-config.mjs` | Turns environment variables into the deploy's config. |
+| `tools/dev-board.mjs` | In-memory stand-in for the store, for local work. |
 | `tools/serve.mjs` | Local preview server, no install required. |
 | `test/` | Node tests for the logic, a browser suite for the pages. |
 
-There are **no runtime dependencies**. Netlify installs nothing to build this.
+One runtime dependency, `@netlify/blobs`, used only by the functions. There is
+no Firebase, no second console, no auth provider and no SDK loaded from a CDN.
 
 ## Running it locally
 
@@ -82,58 +104,57 @@ npm run build     # writes public/config.generated.js
 npm run dev       # http://localhost:8080
 ```
 
-Without a Firebase configuration the site still builds and loads; it shows its
-setup message instead of the board. To point it at a real project locally,
-create a gitignored `config.local.json`:
+Nothing has to be configured for it to run: the store lives on the same site,
+and a board with no calendars is simply an empty board you can still add to.
+`npm run dev` uses an in-memory store, so no cloud resources are touched.
+
+To try it against real calendars locally, create a gitignored
+`config.local.json`:
 
 ```json
 {
-  "firebase": {
-    "apiKey": "…",
-    "authDomain": "…",
-    "projectId": "…",
-    "storageBucket": "…",
-    "messagingSenderId": "…",
-    "appId": "…"
-  },
-  "calendars": []
+  "calendars": [
+    "https://calendar.google.com/calendar/ical/…/private-…/basic.ics"
+  ],
+  "familyNames": ["Lili", "Ruby", "Max"]
 }
 ```
 
 ## Tests
 
 ```sh
-npm test                              # 68 logic tests, no dependencies
+npm test                              # 102 logic tests
 npm install --no-save playwright      # only needed for the browser suite
-npm run test:browser                  # drives both pages in Chromium
+npm run test:browser                  # 66 checks across both pages in Chromium
 ```
 
-The browser suite stubs Firebase and freezes the clock, then checks the real
-render path: that items land in the right cell, that a ticked-off item greys
-out instead of vanishing, that the board fills the screen without scrolling,
-that the phone page does not scroll sideways, and that the board still renders
-a useful error if Firebase cannot be reached at all.
+The browser suite stubs the board API and the calendar feed, freezes the clock,
+and drives the real render path: a calendar entry classifying itself into the
+right row with the person lifted out of the title, one typed line becoming a
+full item, a ticked-off row greying out instead of vanishing, a calendar row
+ticking off without being editable, the board filling a 1080p screen without
+scrolling, the phone page not scrolling sideways, and the board still showing
+its calendar when its own store is unreachable.
 
 ## Deploying
 
-See [`docs/DEPLOY.md`](docs/DEPLOY.md). Short version: set `FIREBASE_CONFIG`
-and `SECRETS_SCAN_OMIT_KEYS` in the Netlify environment variables, deploy the
-Firestore rules, turn on Anonymous sign-in, and open the site on the kitchen
-screen.
+See [`docs/DEPLOY.md`](docs/DEPLOY.md). Short version: link the repo to
+Netlify, set `CALENDAR_ICS_URLS` and `FAMILY_NAMES`, and open the site on the
+kitchen screen. One console, no Firebase.
 
 Two things catch people out, both covered there: Netlify needs a **base
 directory** of `mrcl-family` while this lives inside the profile repository,
 and Netlify's **secrets scanning** fails the build unless
-`SECRETS_SCAN_OMIT_KEYS` names the Firebase variables — this app writes that
-config into the deployed JavaScript on purpose.
+`SECRETS_SCAN_OMIT_KEYS` names `CALENDAR_ICS_URLS` — the build writes it into
+the deployed JavaScript on purpose.
 
 ## Two things worth knowing
 
-**The Firebase web keys are not secrets**, but they are not published here
-either. They identify the project; what protects the data is
-`firebase/firestore.rules` plus Anonymous sign-in. Keeping the keys in Netlify's
-environment rather than in this public repository means the family's board is
-not something a search engine can index its way into.
+**The calendar feed URLs are secrets.** A Google Calendar "secret address in
+iCal format" grants read access to that calendar to anyone holding it, which is
+why they live in Netlify's environment and not in this public repository.
+`netlify/functions/calendar.mjs` only ever fetches URLs on the deploy's own
+allowlist, so the endpoint cannot be pointed anywhere else.
 
 **There is no Content-Security-Policy header yet.** One is drafted in
 `docs/DEPLOY.md` under "Optional hardening", but it is left off by default: a

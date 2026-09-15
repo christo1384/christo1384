@@ -4,6 +4,7 @@
 // request goes through netlify/functions/calendar.mjs, which only forwards
 // URLs that are in the deploy's own allowlist.
 
+import { toBoardItem } from './classify.js';
 import { CONFIG } from './config.js';
 import { occurrencesInRange } from './ics.js';
 
@@ -19,7 +20,9 @@ export function normaliseFeeds(calendars) {
     .filter((entry) => entry && typeof entry.url === 'string' && entry.url.trim())
     .map((entry) => ({
       url: entry.url.trim(),
-      category: entry.category || 'appointment',
+      // No category pins the feed to one row, so each event picks its own from
+      // its title. That is the normal case for a shared family calendar.
+      category: entry.category || '',
       label: entry.label || '',
     }));
 }
@@ -34,7 +37,10 @@ export function proxyUrl(feedUrl) {
  *
  * A feed that fails is skipped; one broken calendar never blanks the board.
  */
-export async function fetchCalendarItems(days, { fetchImpl = globalThis.fetch, calendars = CONFIG.calendars } = {}) {
+export async function fetchCalendarItems(
+  days,
+  { fetchImpl = globalThis.fetch, calendars = CONFIG.calendars, names = CONFIG.familyNames } = {},
+) {
   const feeds = normaliseFeeds(calendars);
   if (!feeds.length) return [];
 
@@ -47,15 +53,17 @@ export async function fetchCalendarItems(days, { fetchImpl = globalThis.fetch, c
         const response = await fetchImpl(proxyUrl(feed.url), { cache: 'no-store' });
         if (!response.ok) return [];
         const text = await response.text();
-        return occurrencesInRange(text, start, end).map((occurrence) => ({
-          ...occurrence,
-          id: `calendar:${feed.url}:${occurrence.uid}:${occurrence.date}`,
-          category: feed.category,
-          who: feed.label,
-          done: false,
-          annual: false,
-          readOnly: true,
-        }));
+        return occurrencesInRange(text, start, end).map((occurrence) => {
+          const item = toBoardItem(occurrence, { names, defaultCategory: feed.category });
+          return {
+            ...item,
+            id: `calendar:${feed.url}:${occurrence.uid}:${occurrence.date}`,
+            who: item.who || feed.label,
+            done: false,
+            annual: false,
+            readOnly: true,
+          };
+        });
       } catch {
         return [];
       }

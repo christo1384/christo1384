@@ -17,8 +17,9 @@ const FEED = [
 ].join('\r\n');
 
 test('normaliseFeeds accepts strings and objects, and drops junk', () => {
+  // No category means "let each event pick its own row".
   assert.deepEqual(normaliseFeeds(['https://example.com/a.ics']), [
-    { url: 'https://example.com/a.ics', category: 'appointment', label: '' },
+    { url: 'https://example.com/a.ics', category: '', label: '' },
   ]);
   assert.deepEqual(normaliseFeeds([{ url: 'https://e/b.ics', category: 'sport', label: 'Ruby' }]), [
     { url: 'https://e/b.ics', category: 'sport', label: 'Ruby' },
@@ -38,9 +39,32 @@ test('fetchCalendarItems returns board-shaped, read-only items', async () => {
   assert.equal(items[0].title, 'Soccer');
   assert.equal(items[0].date, '2026-07-16');
   assert.equal(items[0].time, '16:00');
-  assert.equal(items[0].category, 'appointment');
+  // "Soccer" classifies itself into the sports row with no configuration.
+  assert.equal(items[0].category, 'sport');
   assert.equal(items[0].readOnly, true);
   assert.equal(items[0].done, false);
+});
+
+test('a family calendar entry classifies itself and names the person', async () => {
+  const feed = [
+    'BEGIN:VCALENDAR',
+    'BEGIN:VEVENT',
+    'UID:ortho-1',
+    'SUMMARY:Lili Ortho 8.20am',
+    'DTSTART:20260716T082000',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+  const fetchImpl = async () => ({ ok: true, text: async () => feed });
+  const items = await fetchCalendarItems(days, {
+    fetchImpl,
+    calendars: ['https://e/a.ics'],
+    names: ['Lili', 'Ruby'],
+  });
+  assert.equal(items[0].category, 'appointment');
+  assert.equal(items[0].who, 'Lili');
+  assert.equal(items[0].title, 'Ortho');
+  assert.equal(items[0].time, '08:20');
 });
 
 test('a feed can be routed to a different row of the board', async () => {

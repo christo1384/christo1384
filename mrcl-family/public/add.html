@@ -21,8 +21,20 @@
         <a href="/">See the board</a>
       </header>
 
-      <form class="card" data-form novalidate>
-        <h2 class="visually-hidden" data-form-title>Add to the week</h2>
+      <form class="card" data-quick novalidate>
+        <div class="field">
+          <label for="quick">Add something</label>
+          <input id="quick" name="quick" type="text" autocomplete="off" enterkeyhint="done"
+                 placeholder="soccer thu 4pm lili" />
+        </div>
+        <p class="understood" data-understood aria-live="polite"></p>
+        <button class="primary" type="submit" data-quick-submit>Add to the week</button>
+        <button class="ghost" type="button" data-details>More detail</button>
+        <p class="message" data-quick-message role="status" aria-live="polite"></p>
+      </form>
+
+      <form class="card" data-form novalidate hidden>
+        <h2 data-form-title>Add to the week</h2>
 
         <div class="field">
           <label for="title">What is it?</label>
@@ -71,14 +83,6 @@
       <div data-list></div>
     </div>
 
-    <div class="setup" data-setup hidden>
-      <h1>Nearly there</h1>
-      <p>
-        This deploy has no Firebase configuration, so there is nothing to add to yet.
-        Missing: <span class="missing" data-setup-missing></span>.
-      </p>
-      <p>Set <code>FIREBASE_CONFIG</code> in the Netlify environment variables and redeploy — see <code>docs/DEPLOY.md</code>.</p>
-    </div>
 
     <script type="module" src="/js/add.js"></script>
   </body>

@@ -1,5 +1,5 @@
-// Pure week/date helpers. No DOM, no Firebase — so the Node tests can import
-// this file directly, exactly as the browser does.
+// Pure week/date helpers. No DOM and no network, so the Node tests import this
+// file directly, exactly as the browser does.
 //
 // Everything works in LOCAL time. Dates are stored as 'YYYY-MM-DD' strings and
 // parsed back with an explicit year/month/day constructor, never `new

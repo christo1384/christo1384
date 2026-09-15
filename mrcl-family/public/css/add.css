@@ -267,3 +267,34 @@ button:disabled {
     color: #ffffff;
   }
 }
+
+/* What the quick-add box understood, shown before anything is saved. */
+.understood {
+  margin: 0.4rem 0 0;
+  min-height: 1.2em;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+.understood:not(:empty)::before {
+  content: "→ ";
+  color: var(--ok);
+}
+
+[data-form] h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: var(--ink-dim);
+}
+
+button.ghost[data-details] {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+/* An empty status line should not hold open a gap in the card. */
+.message:empty,
+.understood:empty {
+  min-height: 0;
+  margin-top: 0;
+}

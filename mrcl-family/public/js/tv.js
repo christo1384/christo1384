@@ -5,10 +5,10 @@
 // on a wall has nobody to press them.
 
 import { BAND_CATEGORIES, GRID_CATEGORIES } from './categories.js';
-import { CONFIG, isConfigured, missingFirebaseKeys } from './config.js';
+import { CONFIG, hasCalendars } from './config.js';
 import { fetchCalendarItems } from './calendar.js';
 import { itemSubtitle } from './item.js';
-import { subscribeToWeek } from './store.js';
+import { subscribeToWeek, tickKey } from './store.js';
 import { bandItems, buildWeek, formatTime, groupByCategoryAndDay, itemsForWeek, weekLabel } from './week.js';
 import { fetchForecast } from './weather.js';
 
@@ -25,15 +25,16 @@ const els = {
   bandBottom: document.querySelector('[data-band="bottom"]'),
   status: document.querySelector('[data-status]'),
   hint: document.querySelector('[data-hint]'),
+  calendarHint: document.querySelector('[data-calendar-hint]'),
   app: document.querySelector('[data-app]'),
-  setup: document.querySelector('[data-setup]'),
-  setupMissing: document.querySelector('[data-setup-missing]'),
 };
 
 const state = {
   days: [],
   weekKey: '',
   liveItems: [],
+  annualItems: [],
+  ticks: {},
   calendarItems: [],
   forecast: {},
   unsubscribe: null,
@@ -169,8 +170,19 @@ function renderWeather() {
   }
 }
 
+/** Everything the board shows: the calendar, plus what the board itself holds. */
+function allItems() {
+  const own = itemsForWeek([...state.liveItems, ...state.annualItems], state.days);
+  // A calendar event can be ticked off without the calendar ever being touched.
+  const fromCalendar = state.calendarItems.map((item) => ({
+    ...item,
+    done: Boolean(state.ticks[tickKey(item)]),
+  }));
+  return [...own, ...fromCalendar];
+}
+
 function render() {
-  const all = [...itemsForWeek(state.liveItems, state.days), ...state.calendarItems];
+  const all = allItems();
 
   renderCells(groupByCategoryAndDay(all));
   for (const cat of BAND_CATEGORIES) {
@@ -219,16 +231,6 @@ function loadWeather() {
     .catch(() => {});
 }
 
-const ERROR_MESSAGES = {
-  'permission-denied': 'Firestore refused the read — check the security rules are deployed.',
-  'not-configured': 'This deploy has no Firebase configuration.',
-  'sdk-unreachable': 'Could not load Firebase. Check this screen has internet.',
-  'anonymous-auth-disabled': 'Turn on Anonymous sign-in in the Firebase console (Authentication → Sign-in method).',
-  'sign-in-failed': 'Could not sign in to Firebase.',
-  'connect-failed': 'Cannot reach Firebase. Check the connection.',
-  'read-failed': 'Lost the connection to Firebase. Retrying.',
-};
-
 function showWeek(anchor) {
   state.days = buildWeek(anchor, { weekStartsOn: CONFIG.weekStartsOn, today: anchor });
   state.weekKey = state.days[0].iso;
@@ -240,13 +242,15 @@ function showWeek(anchor) {
   state.unsubscribe?.();
   state.unsubscribe = subscribeToWeek(
     state.days,
-    (items) => {
+    ({ items, ticks, annual }) => {
       state.liveItems = items;
+      state.ticks = ticks;
+      state.annualItems = annual;
       state.error = '';
       render();
     },
-    (reason) => {
-      state.error = ERROR_MESSAGES[reason] || 'Something went wrong talking to Firebase.';
+    (message) => {
+      state.error = message;
       render();
     },
   );
@@ -289,13 +293,8 @@ function start() {
   document.title = CONFIG.boardTitle;
   els.title.textContent = CONFIG.boardTitle;
   if (els.hint) els.hint.textContent = `${window.location.host}/add`;
-
-  if (!isConfigured()) {
-    els.app.hidden = true;
-    els.setup.hidden = false;
-    els.setupMissing.textContent = missingFirebaseKeys().join(', ');
-    return;
-  }
+  // A board with no calendars still works; it just has nothing feeding it.
+  if (els.calendarHint) els.calendarHint.hidden = hasCalendars();
 
   renderClock();
   showWeek(new Date());

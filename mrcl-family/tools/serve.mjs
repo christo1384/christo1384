@@ -23,6 +23,9 @@ const TYPES = {
 };
 
 const calendarFn = (await import('../netlify/functions/calendar.mjs')).default;
+// The real board function needs Netlify Blobs; locally we use the in-memory
+// stand-in so `npm run dev` works with no cloud resources at all.
+const boardFn = (await import('./dev-board.mjs')).default;
 
 async function resolveFile(pathname) {
   // Strip the leading slash and any attempt to climb out of public/.
@@ -43,6 +46,18 @@ async function resolveFile(pathname) {
 
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${port}`);
+
+  if (url.pathname === '/api/board') {
+    const body = req.method === 'POST' ? await new Promise((resolve) => {
+      const chunks = [];
+      req.on('data', (c) => chunks.push(c));
+      req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    }) : undefined;
+    const response = await boardFn(new Request(url, { method: req.method, body, headers: { 'content-type': 'application/json' } }));
+    res.writeHead(response.status, Object.fromEntries(response.headers));
+    res.end(await response.text());
+    return;
+  }
 
   if (url.pathname === '/api/calendar') {
     const response = await calendarFn(new Request(url, { method: req.method }));
