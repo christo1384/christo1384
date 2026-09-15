@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+
+# Written at build time from the environment. Never committed: settings belong
+# in the host's environment, not in this public repository.
+public/config.generated.js
+
+# Local stand-in for the host's environment variables.
+config.local.json

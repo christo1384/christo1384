@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en-NZ">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Add · The MRCL family Week</title>
+    <meta name="description" content="Add something to the family week." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0d1117" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/add.css" />
+    <script src="/config.generated.js"></script>
+  </head>
+  <body class="add">
+    <div data-app>
+      <header class="add-header">
+        <h1 data-board-title>The MRCL family Week</h1>
+        <a href="/">See the board</a>
+      </header>
+
+      <form class="card" data-quick novalidate>
+        <div class="field">
+          <label for="quick">Add something</label>
+          <input id="quick" name="quick" type="text" autocomplete="off" enterkeyhint="done"
+                 placeholder="soccer thu 4pm lili" />
+        </div>
+        <p class="understood" data-understood aria-live="polite"></p>
+        <button class="primary" type="submit" data-quick-submit>Add to the week</button>
+        <button class="ghost" type="button" data-details>More detail</button>
+        <p class="message" data-quick-message role="status" aria-live="polite"></p>
+      </form>
+
+      <form class="card" data-form novalidate hidden>
+        <h2 data-form-title>Add to the week</h2>
+
+        <div class="field">
+          <label for="title">What is it?</label>
+          <input id="title" name="title" type="text" maxlength="120" required autocomplete="off"
+                 placeholder="Soccer practice" />
+        </div>
+
+        <div class="field">
+          <label for="category">Which row?</label>
+          <select id="category" name="category"></select>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="date">Date</label>
+            <input id="date" name="date" type="date" required />
+          </div>
+          <div class="field">
+            <label for="time">Time <span aria-hidden="true">(optional)</span></label>
+            <input id="time" name="time" type="time" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="who">Who is it for? <span aria-hidden="true">(optional)</span></label>
+          <input id="who" name="who" type="text" maxlength="40" autocomplete="off" placeholder="Ruby" />
+        </div>
+
+        <div class="field">
+          <label for="repeat">Repeat</label>
+          <select id="repeat" name="repeat">
+            <option value="none">Just once</option>
+            <option value="weekly">Every week</option>
+            <option value="annual">Every year</option>
+          </select>
+        </div>
+
+        <button class="primary" type="submit" data-submit>Add to the week</button>
+        <button class="ghost" type="button" data-cancel hidden>Cancel</button>
+        <p class="message" data-message role="status" aria-live="polite"></p>
+      </form>
+
+      <nav class="week-nav" aria-label="Week">
+        <button type="button" data-prev aria-label="Previous week">←</button>
+        <span class="week-range" data-week-range></span>
+        <button type="button" data-next aria-label="Next week">→</button>
+      </nav>
+      <button class="ghost" type="button" data-today hidden>Back to this week</button>
+
+      <div data-list></div>
+
+      <section class="shopping" aria-labelledby="shopping-heading">
+        <h2 id="shopping-heading">
+          Shopping list
+          <span class="row-meta" data-shopping-count></span>
+        </h2>
+
+        <form class="card" data-shopping-form novalidate>
+          <div class="field">
+            <label for="shopping-input">Add to the list</label>
+            <input id="shopping-input" name="shopping" type="text" autocomplete="off"
+                   enterkeyhint="done" maxlength="80" placeholder="milk" />
+          </div>
+          <button class="primary" type="submit" data-shopping-submit>Add</button>
+          <p class="message" data-shopping-message role="status" aria-live="polite"></p>
+        </form>
+
+        <div data-shopping-list></div>
+        <button class="ghost" type="button" data-shopping-clear hidden>Clear what is in the trolley</button>
+      </section>
+    </div>
+
+
+    <script type="module" src="/js/add.js"></script>
+  </body>
+</html>

@@ -1,0 +1,391 @@
+/* The phone page: add something, tick it off, fix a mistake. Built for thumbs
+   and for a hand holding a child at the same time — nothing smaller than 44px. */
+
+body.add {
+  --page: 32rem;
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: max(0.75rem, env(safe-area-inset-top)) 0.9rem calc(2.5rem + env(safe-area-inset-bottom));
+  line-height: 1.45;
+}
+
+.add-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.add-header h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+
+.add-header a {
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--line);
+}
+
+/* --- Form ---------------------------------------------------------------- */
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.9rem;
+  margin-bottom: 1.1rem;
+}
+
+.field {
+  margin-bottom: 0.75rem;
+}
+
+.field:last-of-type {
+  margin-bottom: 0;
+}
+
+.field label {
+  display: block;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+  margin-bottom: 0.3rem;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.65rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  /* 16px stops iOS zooming the page when the field takes focus. */
+  font-size: 16px;
+}
+
+.field input:focus-visible,
+.field select:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--day-4);
+  outline-offset: 2px;
+}
+
+.field-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.field-row .field {
+  flex: 1 1 0;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 44px;
+}
+
+.check input {
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+  flex: 0 0 auto;
+  accent-color: var(--ok);
+}
+
+.check label {
+  margin: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+button {
+  min-height: 46px;
+  padding: 0.55rem 1rem;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+  cursor: pointer;
+}
+
+button.primary {
+  width: 100%;
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #06240f;
+  font-weight: 650;
+  font-size: 1rem;
+  margin-top: 0.9rem;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--ink-dim);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.message {
+  margin-top: 0.7rem;
+  font-size: 0.9rem;
+  min-height: 1.2em;
+}
+
+.message.is-error {
+  color: var(--danger);
+}
+
+.message.is-ok {
+  color: var(--ok);
+}
+
+/* --- Week list ----------------------------------------------------------- */
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+}
+
+.week-nav .week-range {
+  font-weight: 600;
+  text-align: center;
+  flex: 1 1 auto;
+}
+
+.week-nav button {
+  min-width: 46px;
+}
+
+.day-group {
+  margin-bottom: 0.9rem;
+}
+
+.day-group h2 {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-dim);
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.day-group.is-today h2 {
+  color: var(--today);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--row-accent, var(--line));
+  border-radius: 9px;
+  padding: 0.5rem 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.row .row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.row .row-title {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.row .row-meta {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+}
+
+.row.is-done .row-title {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+
+.row .row-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+}
+
+.row .row-actions button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.6rem;
+  font-size: 0.85rem;
+}
+
+.row.read-only .row-meta::after {
+  content: " · from calendar";
+  color: var(--ink-faint);
+}
+
+.empty-week {
+  color: var(--ink-faint);
+  font-style: italic;
+  padding: 1.5rem 0;
+  text-align: center;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f5f7fa;
+    --panel: #ffffff;
+    --panel-soft: #eef2f7;
+    --line: #d3dbe5;
+    --ink: #17202b;
+    --ink-dim: #5a6775;
+    --ink-faint: #8b97a5;
+    --today: #b26a00;
+    --ok: #1f9d55;
+    --danger: #c92a2a;
+  }
+
+  body.add button.primary {
+    color: #ffffff;
+  }
+}
+
+/* What the quick-add box understood, shown before anything is saved. */
+.understood {
+  margin: 0.4rem 0 0;
+  min-height: 1.2em;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+.understood:not(:empty)::before {
+  content: "→ ";
+  color: var(--ok);
+}
+
+[data-form] h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: var(--ink-dim);
+}
+
+button.ghost[data-details] {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+/* An empty status line should not hold open a gap in the card. */
+.message:empty,
+.understood:empty {
+  min-height: 0;
+  margin-top: 0;
+}
+
+/* --- Shopping list ------------------------------------------------------- */
+
+.shopping {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.shopping h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-dim);
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.shopping .card {
+  margin-bottom: 0.9rem;
+}
+
+.shop-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0.35rem 0.5rem 0.35rem 0.65rem;
+  margin-bottom: 0.35rem;
+}
+
+/* The whole row is the tick target: one thumb, in a supermarket aisle. */
+.shop-row .shop-toggle {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.shop-row .box {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.shop-row.is-done .box {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #ffffff;
+}
+
+.shop-row.is-done .shop-title {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+
+.shop-row .shop-remove {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  border: 0;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.shopping .empty-week {
+  padding: 0.75rem 0;
+}
+
+button.ghost[data-shopping-clear] {
+  width: 100%;
+  margin-top: 0.25rem;
+}

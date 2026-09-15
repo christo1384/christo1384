@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en-NZ">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>The MRCL family Week</title>
+    <meta name="description" content="The family week, on the kitchen screen." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0d1117" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/tv.css" />
+    <script src="/config.generated.js"></script>
+  </head>
+  <body class="tv">
+    <div data-app>
+      <header class="tv-header">
+        <h1 data-board-title>The MRCL family Week</h1>
+        <div class="week-range" data-week-range></div>
+        <div class="clock" data-clock></div>
+      </header>
+
+      <section class="band band-top" data-band="top" aria-label="Birthdays"></section>
+
+      <div class="board-scroll">
+        <div class="board" data-board role="table" aria-label="The family week"></div>
+      </div>
+
+      <section class="weather" data-weather aria-label="Weather" hidden></section>
+
+      <section class="band band-bottom" data-band="bottom" aria-label="Out and about"></section>
+
+      <footer class="tv-footer">
+        <span class="status" data-status></span>
+        <span data-shopping-hint hidden></span>
+        <span data-calendar-hint hidden>No calendars connected yet</span>
+        <span>Add something at <strong data-hint></strong></span>
+      </footer>
+    </div>
+
+
+    <script type="module" src="/js/tv.js"></script>
+  </body>
+</html>
