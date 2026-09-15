@@ -18,7 +18,13 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), 'public');
 const port = Number(process.env.PORT) || 8080;
 
 const feeds = parseFeeds(process.env.CALENDAR_ICS_URLS);
-const store = await createStore(process.env.REDIS_URL || process.env.KEY_VALUE_URL);
+
+// An explicitly empty SNAPSHOT_PATH means "no local snapshot", which is what
+// tests want; leaving it unset means "use the default location".
+const rawSnapshot = process.env.SNAPSHOT_PATH;
+const snapshotPath = rawSnapshot === undefined ? undefined : rawSnapshot.trim() || null;
+
+const store = await createStore(process.env.REDIS_URL || process.env.KEY_VALUE_URL, { snapshotPath });
 
 /* -------------------------------------------------------------------- auth */
 

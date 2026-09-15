@@ -61,6 +61,7 @@ async function writeSnapshot(path, entries) {
  *   shared file on disk would leak one test's data into the next.
  */
 export async function createStore(redisUrl, { snapshotPath = DEFAULT_SNAPSHOT_PATH } = {}) {
+  // `undefined` means "use the default"; `null` means "no snapshot at all".
   const memory = createMemoryLayer();
   let redis = null;
 
