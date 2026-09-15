@@ -51,8 +51,10 @@ createServer(async (req, res) => {
     return;
   }
 
-  if (url.pathname === '/mobile-update.html') {
-    res.writeHead(301, { location: '/add' });
+  // Mirrors the redirects in netlify.toml for the previous version's pages.
+  const legacy = { '/mobile-update.html': '/add', '/tv-display.html': '/' };
+  if (legacy[url.pathname]) {
+    res.writeHead(301, { location: legacy[url.pathname] });
     res.end();
     return;
   }

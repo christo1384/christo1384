@@ -48,6 +48,10 @@ Done on a phone. No controls: a screen on a wall has nobody to press them.
 **The phone page** (`/add`) — add something, tick it off, edit it, delete it,
 and look at next week. Add it to the home screen and it opens like an app.
 
+The previous version's URLs still work: `/tv-display.html` redirects to the
+board and `/mobile-update.html` to `/add`, so existing bookmarks and
+home-screen icons survive the switch.
+
 Ticking something off greys it out rather than removing it, so you can still
 see what has been handled — the same behaviour the old board had.
 

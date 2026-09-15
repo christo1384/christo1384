@@ -7,6 +7,7 @@
 | Where config lived | `localStorage`, per device, per domain | The deploy, set once in Netlify |
 | Setting up a phone | Gear icon, paste Firebase snippet, paste calendar ids, save, reload | Open the page |
 | Effect of renaming the site | Every device silently reset to "not set" | Nothing |
+| Kitchen screen | `/tv-display.html` | `/` (the old URL redirects) |
 | Phone page | `/mobile-update.html` | `/add` (the old URL redirects) |
 | Board updates | Polled every 5 minutes | Realtime, within a second |
 | Repeating calendar events | — | Expanded from the feed |
@@ -64,5 +65,6 @@ retires the key that went out by email.
 2. Check the board on the kitchen screen shows the current week.
 3. Send everyone the new link. There are no setup steps to include this time —
    open it, and Add to Home Screen if they want it to look like an app.
-4. Old home-screen icons keep working: `/mobile-update.html` redirects to
-   `/add`.
+4. Old bookmarks keep working: `/tv-display.html` redirects to the board and
+   `/mobile-update.html` to `/add`, so the kitchen screen and any home-screen
+   icons survive the switch untouched.

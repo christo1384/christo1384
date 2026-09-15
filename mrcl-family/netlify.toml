@@ -8,7 +8,15 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# Old home-screen icons and bookmarks still point at the previous page name.
+# The previous version's page names. The kitchen screen was bookmarked to
+# /tv-display.html and the phones' home-screen icons to /mobile-update.html;
+# both keep working.
+[[redirects]]
+  from = "/tv-display.html"
+  to = "/"
+  status = 301
+  force = true
+
 [[redirects]]
   from = "/mobile-update.html"
   to = "/add"

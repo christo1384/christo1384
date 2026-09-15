@@ -295,8 +295,13 @@ async function testPhone(context) {
 async function testLegacyRedirect(context) {
   console.log('\nOld bookmarks');
   const { page } = await preparePage(context);
+
   await page.goto(`${BASE}/mobile-update.html`, { waitUntil: 'networkidle' });
   check('the old phone URL lands on the new one', new URL(page.url()).pathname === '/add', page.url());
+
+  await page.goto(`${BASE}/tv-display.html`, { waitUntil: 'networkidle' });
+  check('the old TV URL lands on the board', new URL(page.url()).pathname === '/', page.url());
+
   await page.close();
 }
 

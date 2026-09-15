@@ -116,8 +116,8 @@ up overnight.
 ⋮ → *Add to Home screen* (Android). That is the entire setup. No gear icon, no
 keys, nothing to paste.
 
-Old home-screen icons pointing at `/mobile-update.html` are redirected to
-`/add`, so they keep working.
+The previous version's URLs are redirected, so nothing has to be re-bookmarked:
+`/tv-display.html` goes to the board and `/mobile-update.html` to `/add`.
 
 ---
 
