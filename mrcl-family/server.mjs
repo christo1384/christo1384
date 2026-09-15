@@ -215,6 +215,26 @@ async function selfCheck() {
       console.error(`[self-check] FAILED ${path}: ${error.message}`);
     }
   }
+
+  // A feed that is configured but unreachable leaves the board silently empty,
+  // which looks identical to "nothing on this week". Say which it is.
+  for (const feed of feeds) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/calendar?feed=${feed.id}`, {
+        headers: cookie ? { cookie } : {},
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!response.ok) {
+        console.error(`[self-check] FAILED feed ${feed.id}: ${response.status} — ${await response.text()}`);
+        continue;
+      }
+      const text = await response.text();
+      const events = (text.match(/BEGIN:VEVENT/g) || []).length;
+      console.log(`[self-check] ok feed ${feed.id}: ${events} event(s), ${text.length} bytes`);
+    } catch (error) {
+      console.error(`[self-check] FAILED feed ${feed.id}: ${error.message}`);
+    }
+  }
 }
 
 // Printed only when asked for, so a key never lands in a build log by accident.
