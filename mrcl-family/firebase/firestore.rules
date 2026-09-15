@@ -1,0 +1,55 @@
+rules_version = '2';
+
+// Security rules for the family week.
+//
+// Anyone who opens the site is signed in anonymously, so `request.auth` is
+// always set for a legitimate caller and never set for a bare HTTP request
+// against the REST API. The shape checks below mirror public/js/item.js — the
+// client check gives a helpful message, these rules are what actually hold.
+//
+// Deploy with:  firebase deploy --only firestore:rules
+//
+// If FIRESTORE_COLLECTION is changed away from "items", change the match path
+// here to suit.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function validCategory(value) {
+      return value in ['birthday', 'appointment', 'dinner', 'chore', 'sport', 'family', 'note', 'out'];
+    }
+
+    function validItem(data) {
+      return data.keys().hasOnly(['title', 'category', 'who', 'date', 'time', 'annual', 'done', 'createdAt', 'updatedAt'])
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 120
+        && data.category is string
+        && validCategory(data.category)
+        && data.who is string
+        && data.who.size() <= 40
+        && data.date is string
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.time is string
+        && (data.time == '' || data.time.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$'))
+        && data.annual is bool
+        && data.done is bool;
+    }
+
+    match /items/{itemId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validItem(request.resource.data);
+      allow update: if signedIn() && validItem(request.resource.data);
+      allow delete: if signedIn();
+    }
+
+    // Nothing else in the project is reachable from the web app.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

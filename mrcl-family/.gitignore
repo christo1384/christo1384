@@ -1,0 +1,10 @@
+node_modules/
+.netlify/
+.DS_Store
+
+# Written at build time from the environment. Never committed: that is the
+# whole point of keeping the keys out of this public repository.
+public/config.generated.js
+
+# Local stand-in for the Netlify environment variables.
+config.local.json

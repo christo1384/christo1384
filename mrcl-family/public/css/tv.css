@@ -1,0 +1,360 @@
+/* The kitchen board. Sized to fill a TV exactly once, with no scrolling: the
+   whole week has to be readable from the other side of the room. */
+
+body.tv {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: clamp(0.5rem, 1.2vh, 1.1rem) clamp(0.6rem, 1.2vw, 1.4rem);
+  gap: clamp(0.35rem, 0.9vh, 0.8rem);
+
+  /* Everything on the board scales from these two. */
+  --cell-text: clamp(0.72rem, 1.02vw, 1.45rem);
+  --head-text: clamp(0.85rem, 1.25vw, 1.8rem);
+  --label-text: clamp(0.66rem, 0.92vw, 1.3rem);
+  --label-col: clamp(6.5rem, 11vw, 14rem);
+}
+
+/* The wrapper exists only so the setup panel can replace the whole board; it
+   must not sit between the body's flex column and the rows that stretch. */
+body.tv > [data-app] {
+  display: contents;
+}
+
+.tv-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex: 0 0 auto;
+}
+
+.tv-header h1 {
+  margin: 0;
+  font-size: clamp(1.1rem, 2.1vw, 3rem);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.tv-header .week-range {
+  color: var(--ink-dim);
+  font-size: clamp(0.8rem, 1.2vw, 1.6rem);
+}
+
+.tv-header .clock {
+  font-size: clamp(1rem, 1.9vw, 2.6rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--today);
+}
+
+/* --- Full-width strips (birthdays at the top, out and about at the bottom) - */
+
+.band {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.4rem, 0.8vw, 1rem);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--band-accent, var(--line));
+  border-radius: var(--radius);
+  padding: clamp(0.3rem, 0.7vh, 0.65rem) clamp(0.5rem, 0.9vw, 1rem);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.band .band-label {
+  flex: 0 0 auto;
+  width: var(--label-col);
+  font-size: var(--head-text);
+  font-weight: 650;
+  color: var(--band-accent, var(--ink));
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.band .band-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(0.3rem, 0.7vw, 0.9rem);
+  overflow: hidden;
+}
+
+.band .chip {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.18em 0.75em;
+  font-size: var(--cell-text);
+  white-space: nowrap;
+}
+
+.band .chip .chip-day {
+  color: var(--ink-faint);
+  margin-right: 0.45em;
+}
+
+.band .chip.is-today {
+  border-color: var(--today);
+}
+
+.band .empty {
+  color: var(--ink-faint);
+  font-size: var(--cell-text);
+  font-style: italic;
+}
+
+/* --- The grid: category rows against day columns ------------------------- */
+
+.board-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.board {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--label-col) repeat(7, minmax(0, 1fr));
+  /* grid-template-rows is set from tv.js: an auto header row, then one equal
+     row per category, so the board always fills the screen exactly once. */
+  gap: clamp(2px, 0.35vw, 6px);
+}
+
+.board .corner {
+  background: transparent;
+}
+
+.board .day-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1em;
+  padding: clamp(0.15rem, 0.5vh, 0.45rem);
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: color-mix(in srgb, var(--day-accent) 16%, var(--panel));
+  border-bottom: 3px solid var(--day-accent);
+  line-height: 1.05;
+}
+
+.board .day-head .day-name {
+  font-size: var(--head-text);
+  font-weight: 700;
+  color: var(--day-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.board .day-head .day-date {
+  font-size: calc(var(--cell-text) * 0.95);
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.board .day-head.is-today {
+  background: color-mix(in srgb, var(--day-accent) 34%, var(--panel));
+}
+
+.board .day-head.is-today .day-date {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.board .row-label {
+  display: flex;
+  align-items: center;
+  padding-right: 0.6em;
+  font-size: var(--label-text);
+  font-weight: 600;
+  color: var(--row-accent, var(--ink-dim));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.board .cell {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-top-width: 2px;
+  border-top-color: color-mix(in srgb, var(--row-accent) 45%, var(--line));
+  border-radius: 6px;
+  padding: clamp(0.15rem, 0.45vh, 0.4rem) clamp(0.2rem, 0.4vw, 0.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.18em;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.board .cell.is-today {
+  background: color-mix(in srgb, var(--today) 7%, var(--panel));
+  border-color: color-mix(in srgb, var(--today) 30%, var(--line));
+}
+
+.board .cell.is-weekend {
+  background: color-mix(in srgb, #ffffff 3%, var(--panel));
+}
+
+.entry {
+  font-size: var(--cell-text);
+  line-height: 1.2;
+  display: flex;
+  gap: 0.35em;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.entry .entry-time {
+  flex: 0 0 auto;
+  color: var(--today);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.entry .entry-title {
+  overflow-wrap: anywhere;
+}
+
+.entry .entry-who {
+  color: var(--ink-faint);
+  flex: 0 0 auto;
+}
+
+/* Ticked off, but still visible — the original board greyed things out rather
+   than removing them, so you can see what has been handled. */
+.entry.is-done {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.entry.is-done .entry-time {
+  color: var(--ink-faint);
+}
+
+.entry.from-calendar .entry-title::after {
+  content: " ·";
+  color: var(--ink-faint);
+}
+
+.cell .more {
+  font-size: calc(var(--cell-text) * 0.85);
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+/* --- Weather strip ------------------------------------------------------- */
+
+.weather {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: var(--label-col) repeat(7, minmax(0, 1fr));
+  gap: clamp(2px, 0.35vw, 6px);
+  align-items: center;
+}
+
+.weather .band-label {
+  font-size: var(--head-text);
+  font-weight: 650;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.weather .wx {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: clamp(0.1rem, 0.35vh, 0.35rem);
+  font-size: var(--cell-text);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.weather .wx .wx-icon {
+  font-size: calc(var(--cell-text) * 1.2);
+}
+
+.weather .wx .wx-temp {
+  font-variant-numeric: tabular-nums;
+}
+
+.weather .wx .wx-min {
+  color: var(--ink-faint);
+}
+
+/* --- Footer -------------------------------------------------------------- */
+
+.tv-footer {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  font-size: clamp(0.6rem, 0.82vw, 1.05rem);
+  color: var(--ink-faint);
+}
+
+.tv-footer .status.is-error {
+  color: var(--danger);
+}
+
+.tv-footer .status.is-live::before {
+  content: "";
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  margin-right: 0.45em;
+  border-radius: 50%;
+  background: var(--ok);
+  vertical-align: baseline;
+}
+
+/* A phone opening the board gets the same grid, scrolled sideways, rather than
+   a second layout to keep working. Adding and ticking things off happens on
+   add.html, which is built for a phone. */
+@media (max-width: 900px) {
+  body.tv {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+
+  .board-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .board,
+  .weather {
+    min-width: 56rem;
+  }
+
+  .board {
+    height: 70vh;
+  }
+
+  .tv-header {
+    flex-wrap: wrap;
+  }
+
+  .band {
+    flex-wrap: wrap;
+  }
+
+  .band .band-label {
+    width: auto;
+  }
+}

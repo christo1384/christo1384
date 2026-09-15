@@ -1,0 +1,17 @@
+{
+  "name": "mrcl-family",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The MRCL family week, on the kitchen screen and in your pocket.",
+  "scripts": {
+    "build": "node tools/build-config.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "dev": "node tools/build-config.mjs && node tools/serve.mjs",
+    "test": "node --test test/*.test.js",
+    "test:browser": "node test/browser/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

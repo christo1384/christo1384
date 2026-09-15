@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en-NZ">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>The MRCL family Week</title>
+    <meta name="description" content="The family week, on the kitchen screen." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0d1117" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/tv.css" />
+    <script src="/config.generated.js"></script>
+  </head>
+  <body class="tv">
+    <div data-app>
+      <header class="tv-header">
+        <h1 data-board-title>The MRCL family Week</h1>
+        <div class="week-range" data-week-range></div>
+        <div class="clock" data-clock></div>
+      </header>
+
+      <section class="band band-top" data-band="top" aria-label="Birthdays"></section>
+
+      <div class="board-scroll">
+        <div class="board" data-board role="table" aria-label="The family week"></div>
+      </div>
+
+      <section class="weather" data-weather aria-label="Weather" hidden></section>
+
+      <section class="band band-bottom" data-band="bottom" aria-label="Out and about"></section>
+
+      <footer class="tv-footer">
+        <span class="status" data-status></span>
+        <span>Add something at <strong data-hint></strong></span>
+      </footer>
+    </div>
+
+    <div class="setup" data-setup hidden>
+      <h1>Nearly there</h1>
+      <p>
+        This deploy has no Firebase configuration, so there is no family list to show yet.
+        Missing: <span class="missing" data-setup-missing></span>.
+      </p>
+      <ol>
+        <li>In Netlify, open <strong>Site configuration → Environment variables</strong>.</li>
+        <li>
+          Add <code>FIREBASE_CONFIG</code> with the Firebase web config as one line of JSON.
+        </li>
+        <li>Redeploy. Every screen picks it up on its next load — nothing to enter on the device.</li>
+      </ol>
+      <p>The full walkthrough is in <code>docs/DEPLOY.md</code> in the repository.</p>
+    </div>
+
+    <script type="module" src="/js/tv.js"></script>
+  </body>
+</html>

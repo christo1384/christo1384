@@ -1,0 +1,113 @@
+/* Shared tokens and resets for both the kitchen board and the phone page. */
+
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel-soft: #1b2231;
+  --line: #2b3444;
+  --ink: #eaf0f8;
+  --ink-dim: #9fabba;
+  --ink-faint: #616d7c;
+  --today: #ffd166;
+  --danger: #ff6b6b;
+  --ok: #5bd98a;
+
+  --day-0: #f78da7; /* Monday   */
+  --day-1: #ffa8a8; /* Tuesday  */
+  --day-2: #ffd166; /* Wednesday*/
+  --day-3: #5bd98a; /* Thursday */
+  --day-4: #7cc4ff; /* Friday   */
+  --day-5: #c792ea; /* Saturday */
+  --day-6: #6fd6d8; /* Sunday   */
+
+  --radius: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+img {
+  max-width: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+:where(button, input, select, textarea) {
+  font: inherit;
+  color: inherit;
+}
+
+:where(a) {
+  color: var(--day-4);
+}
+
+/* The panel shown when a deploy has no Firebase configuration yet. */
+.setup {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 5vw, 4rem) 1.25rem;
+  line-height: 1.55;
+}
+
+.setup h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.4rem, 4vw, 2rem);
+}
+
+.setup p {
+  color: var(--ink-dim);
+}
+
+.setup code,
+.setup kbd {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.1em 0.4em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.setup ol {
+  padding-left: 1.25rem;
+}
+
+.setup li {
+  margin-bottom: 0.5rem;
+}
+
+.setup .missing {
+  color: var(--today);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
