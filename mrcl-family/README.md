@@ -116,9 +116,16 @@ a useful error if Firebase cannot be reached at all.
 
 ## Deploying
 
-See [`docs/DEPLOY.md`](docs/DEPLOY.md). Short version: set `FIREBASE_CONFIG` in
-the Netlify environment variables, deploy the Firestore rules, turn on
-Anonymous sign-in, and open the site on the kitchen screen.
+See [`docs/DEPLOY.md`](docs/DEPLOY.md). Short version: set `FIREBASE_CONFIG`
+and `SECRETS_SCAN_OMIT_KEYS` in the Netlify environment variables, deploy the
+Firestore rules, turn on Anonymous sign-in, and open the site on the kitchen
+screen.
+
+Two things catch people out, both covered there: Netlify needs a **base
+directory** of `mrcl-family` while this lives inside the profile repository,
+and Netlify's **secrets scanning** fails the build unless
+`SECRETS_SCAN_OMIT_KEYS` names the Firebase variables — this app writes that
+config into the deployed JavaScript on purpose.
 
 ## Two things worth knowing
 

@@ -65,6 +65,21 @@ Netlify picks the settings up from `netlify.toml`; they should already read:
 | Publish directory | `public` |
 | Functions directory | `netlify/functions` |
 
+**Base directory matters.** While this project lives inside the
+`christo1384/christo1384` profile repository, `netlify.toml` is not at the
+repository root, so Netlify will not find it on its own. Set:
+
+| Setting | Value |
+| --- | --- |
+| Base directory | `mrcl-family` |
+
+If the project is ever split into its own repository, clear that setting again.
+
+> The existing `mrcl-family` site is a **drag-and-drop deploy** (Netlify records
+> it as `deploy_source: drop`), so it has no repository attached and no build
+> step at all. Connecting it to git is a one-off in the Netlify UI:
+> **Site configuration → Build & deploy → Link repository**.
+
 ### 2b. Set the environment variables
 
 **Site configuration → Environment variables.** Only the first one is required.
@@ -93,7 +108,26 @@ If JSON is awkward, set the six individual variables instead and leave
 `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`,
 `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`.
 
-### 2c. Deploy
+### 2c. Let secrets scanning through
+
+**Without this, the build fails.** Netlify scans the deployed files for the
+values of environment variables and fails the deploy if it finds one. This app
+puts `FIREBASE_CONFIG` into `public/config.generated.js` deliberately — that is
+the whole mechanism — so the scanner has to be told it is expected:
+
+| Variable | Value |
+| --- | --- |
+| `SECRETS_SCAN_OMIT_KEYS` | `FIREBASE_CONFIG,FIREBASE_API_KEY,FIREBASE_AUTH_DOMAIN,FIREBASE_PROJECT_ID,FIREBASE_STORAGE_BUCKET,FIREBASE_MESSAGING_SENDER_ID,FIREBASE_APP_ID` |
+
+Do **not** mark `FIREBASE_CONFIG` itself as a "secret" variable in Netlify.
+Secret variables are withheld from the deployed output, which is precisely
+where this one has to end up. A Firebase web config is a public client
+identifier, not a credential; what protects the data is step 1b plus step 1a.
+
+If a deploy fails with *"Secrets scanning found secrets in build output"*, this
+is the variable that is missing.
+
+### 2d. Deploy
 
 Trigger a deploy. The build log should say:
 
@@ -103,6 +137,20 @@ Trigger a deploy. The build log should say:
 
 If it says `Firebase from nothing`, the environment variable has not been
 picked up and the site will show its setup message.
+
+---
+
+### 2e. Deploying without a git link
+
+If the site is not connected to a repository, deploy from a clone instead:
+
+```sh
+cd mrcl-family
+npx netlify-cli deploy --build --prod --site <site-id>
+```
+
+This needs direct network access to `api.netlify.com`, which some sandboxed
+environments block.
 
 ---
 
