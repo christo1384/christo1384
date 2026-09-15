@@ -188,7 +188,34 @@ createServer(async (req, res) => {
   console.log(`[server] calendar feeds: ${feeds.length}`);
   console.log(`[server] access: ${ACCESS_KEY ? 'key required' : 'OPEN (no ACCESS_KEY set)'}`);
   if (!ACCESS_KEY) console.warn('[server] set ACCESS_KEY to lock the board down.');
+  if (process.env.SELF_CHECK !== 'off') selfCheck();
 });
+
+/**
+ * Ask ourselves for the pages once, at boot, and log what came back.
+ *
+ * A deploy that builds and starts is reported as live even if it then serves
+ * 500s for everything, and the deploy log is the only place anyone looks. This
+ * turns "it started" into "it served". It never affects whether the service
+ * runs: every failure is caught and logged.
+ */
+async function selfCheck() {
+  const cookie = ACCESS_KEY ? `${COOKIE}=${cookieValue()}` : '';
+  const paths = ['/healthz', '/', '/add', '/api/calendars', '/api/board?week=2026-01-05'];
+
+  for (const path of paths) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}${path}`, {
+        headers: cookie ? { cookie } : {},
+        signal: AbortSignal.timeout(5_000),
+      });
+      const note = response.ok ? 'ok' : 'FAILED';
+      console.log(`[self-check] ${note} ${response.status} ${path}`);
+    } catch (error) {
+      console.error(`[self-check] FAILED ${path}: ${error.message}`);
+    }
+  }
+}
 
 // Printed only when asked for, so a key never lands in a build log by accident.
 if (process.argv.includes('--suggest-key')) {

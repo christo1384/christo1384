@@ -12,7 +12,7 @@ async function boot(env = {}) {
   const port = 8100 + Math.floor(Math.random() * 400);
   const child = spawn(process.execPath, ['server.mjs'], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), SNAPSHOT_PATH: '', REDIS_URL: '', ...env },
+    env: { ...process.env, PORT: String(port), SNAPSHOT_PATH: '', REDIS_URL: '', SELF_CHECK: 'off', ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -27,9 +27,23 @@ async function boot(env = {}) {
     child.on('exit', (code) => rejectReady(new Error(`server exited with ${code}`)));
   });
 
+  const output = [];
+  child.stdout.on('data', (chunk) => output.push(...chunk.toString().split('\n')));
+  child.stderr.on('data', (chunk) => output.push(...chunk.toString().split('\n')));
+
   return {
     url: `http://localhost:${port}`,
     stop: () => child.kill(),
+    /** Wait for `count` lines matching `pattern`, or time out. */
+    async collect(pattern, count, timeoutMs) {
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const matches = output.filter((line) => pattern.test(line));
+        if (matches.length >= count) return matches;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return output.filter((line) => pattern.test(line));
+    },
   };
 }
 
@@ -164,6 +178,17 @@ test('the link sets a cookie and then the key is never needed again', async (t) 
   // A forged cookie does not work.
   const forged = await fetch(`${server.url}/`, { headers: { cookie: 'mrcl_pass=deadbeef' } });
   assert.equal(forged.status, 401);
+});
+
+test('the boot self-check reports every page as served', async (t) => {
+  const server = await boot({ SELF_CHECK: 'on', ACCESS_KEY: 'test-key-abcdef' });
+  t.after(() => server.stop());
+
+  // Give the check a moment to run, then read what it logged.
+  const lines = await server.collect(/self-check/, 5, 8000);
+  assert.equal(lines.length, 5, lines.join(' | '));
+  assert.equal(lines.every((l) => l.includes('ok ')), true, lines.join(' | '));
+  assert.equal(lines.some((l) => l.includes('FAILED')), false, lines.join(' | '));
 });
 
 test('files outside public/ cannot be reached', async (t) => {
