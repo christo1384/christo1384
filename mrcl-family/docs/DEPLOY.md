@@ -17,9 +17,20 @@ that can run `node server.mjs` will do.
 | URL | https://mrcl-family.onrender.com |
 | Store | `mrcl-family-store` (Render Key Value, free plan) |
 | Deploys from | `christo1384/christo1384`, branch `claude/mrcl-app-build-family-dashboard-73uh72` |
-| Auto-deploy | on, so a push to that branch redeploys |
+| Auto-deploy | flag is on, but see below |
 
 Singapore is the closest Render region to New Zealand.
+
+> **Pushes do not redeploy yet.** The service was created through Render's API
+> with a repository URL, which does not install the GitHub webhook, so nothing
+> notices a new commit. Two ways to fix it, either is a one-off:
+>
+> - In the Render dashboard, **Settings → Build & Deploy → Link repository**,
+>   and pick the repo through the GitHub connection. Auto-deploy then works.
+> - Or leave it and redeploy on demand from the dashboard's **Manual Deploy**
+>   button.
+>
+> Until then a push only changes the code that the *next* deploy will use.
 
 ---
 
