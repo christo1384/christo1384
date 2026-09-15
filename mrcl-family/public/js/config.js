@@ -16,15 +16,6 @@ const DEFAULTS = {
   // 1 = weeks run Monday to Sunday, 0 = Sunday to Saturday.
   weekStartsOn: 1,
 
-  // The family's own calendars, read-only, merged onto the board. Each entry
-  // is either an ICS URL or { url, category, label }: with no category, each
-  // event picks its own row from its title (see classify.js).
-  //
-  // This is where most of the board's content comes from. The family already
-  // keeps a shared Google Calendar current; asking anyone to retype it into
-  // the board is what killed the previous version.
-  calendars: [],
-
   // Used to pull the person out of an entry, so "Lili Ortho" shows as
   // "Ortho · Lili" instead of repeating itself.
   familyNames: [],
@@ -63,14 +54,8 @@ const injected = (typeof window !== 'undefined' && window.__MRCL__) || {};
 
 export const CONFIG = merge(DEFAULTS, injected);
 
-/**
- * There is nothing left that has to be configured before the board works: the
- * store lives on this same site, and a board with no calendars is simply an
- * empty board you can still add to. This exists so the pages can say something
- * useful when a deploy has no calendars at all.
- */
-export function hasCalendars(config = CONFIG) {
-  return Array.isArray(config.calendars) && config.calendars.length > 0;
-}
+// Which calendars a deploy has is not build-time configuration any more: the
+// addresses are secrets that stay on the server, and the pages ask
+// /api/calendars for the list at runtime. See calendar.js.
 
 export { DEFAULTS, merge };

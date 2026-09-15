@@ -10,8 +10,8 @@
 // calendar ever being written to.
 
 import { CATEGORIES, category } from './categories.js';
-import { CONFIG, hasCalendars } from './config.js';
-import { fetchCalendarItems } from './calendar.js';
+import { CONFIG } from './config.js';
+import { fetchCalendarItems, listFeeds } from './calendar.js';
 import { DEFAULT_CATEGORY, itemSubtitle, validateItem } from './item.js';
 import { describeDraft, parseQuickAdd } from './quickadd.js';
 import { addItem, deleteItem, setDone, setTick, subscribeToWeek, tickKey, updateItem } from './store.js';
@@ -378,7 +378,9 @@ function showWeek(anchor, { keepMessages = false } = {}) {
 function start() {
   document.title = `Add · ${CONFIG.boardTitle}`;
   els.title.textContent = CONFIG.boardTitle;
-  if (els.calendarHint) els.calendarHint.hidden = hasCalendars();
+  listFeeds().then((feeds) => {
+    if (els.calendarHint) els.calendarHint.hidden = feeds.length > 0;
+  });
 
   fillCategories();
   resetForm({ keepDate: false });

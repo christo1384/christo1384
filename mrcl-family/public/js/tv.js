@@ -5,8 +5,8 @@
 // on a wall has nobody to press them.
 
 import { BAND_CATEGORIES, GRID_CATEGORIES } from './categories.js';
-import { CONFIG, hasCalendars } from './config.js';
-import { fetchCalendarItems } from './calendar.js';
+import { CONFIG } from './config.js';
+import { fetchCalendarItems, listFeeds } from './calendar.js';
 import { itemSubtitle } from './item.js';
 import { subscribeToWeek, tickKey } from './store.js';
 import { bandItems, buildWeek, formatTime, groupByCategoryAndDay, itemsForWeek, weekLabel } from './week.js';
@@ -294,7 +294,9 @@ function start() {
   els.title.textContent = CONFIG.boardTitle;
   if (els.hint) els.hint.textContent = `${window.location.host}/add`;
   // A board with no calendars still works; it just has nothing feeding it.
-  if (els.calendarHint) els.calendarHint.hidden = hasCalendars();
+  listFeeds().then((feeds) => {
+    if (els.calendarHint) els.calendarHint.hidden = feeds.length > 0;
+  });
 
   renderClock();
   showWeek(new Date());

@@ -6,8 +6,9 @@
   "description": "The MRCL family week, on the kitchen screen and in your pocket.",
   "scripts": {
     "build": "node tools/build-config.mjs",
+    "start": "node server.mjs",
+    "dev": "node tools/build-config.mjs && node server.mjs",
     "icons": "node tools/make-icons.mjs",
-    "dev": "node tools/build-config.mjs && node tools/serve.mjs",
     "test": "node --test test/*.test.js",
     "test:browser": "node test/browser/smoke.mjs"
   },
@@ -15,6 +16,6 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@netlify/blobs": "^11.1.0"
+    "redis": "^6.2.1"
   }
 }

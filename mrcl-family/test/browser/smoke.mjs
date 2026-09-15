@@ -72,15 +72,15 @@ const CALENDAR_FEED = [
 ].join('\r\n');
 
 async function startServer() {
-  const child = spawn(process.execPath, ['tools/serve.mjs'], {
+  const child = spawn(process.execPath, ['server.mjs'], {
     cwd: root,
-    env: { ...process.env, PORT: String(PORT) },
+    env: { ...process.env, PORT: String(PORT), SNAPSHOT_PATH: '', REDIS_URL: '' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   await new Promise((resolveReady, rejectReady) => {
     const timer = setTimeout(() => rejectReady(new Error('server did not start')), 10_000);
     child.stdout.on('data', (chunk) => {
-      if (chunk.toString().includes('http://localhost')) {
+      if (chunk.toString().includes('listening')) {
         clearTimeout(timer);
         resolveReady();
       }
@@ -98,7 +98,7 @@ async function preparePage(context, { items = ITEMS, annual = ANNUAL, calendars 
   // come back on the next read.
   const store = { items: structuredClone(items), annual: structuredClone(annual), ticks: {}, counter: 0 };
 
-  await page.route('**/api/board*', async (route) => {
+  await page.route((url) => url.pathname === '/api/board', async (route) => {
     if (boardDown) {
       await route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"The board is down."}' });
       return;
@@ -145,7 +145,16 @@ async function preparePage(context, { items = ITEMS, annual = ANNUAL, calendars 
     await reply({ error: 'unknown op' }, 400);
   });
 
-  await page.route('**/api/calendar*', (route) =>
+  // Predicates, not globs: a glob's handling of the query string is fragile.
+  await page.route((url) => url.pathname === '/api/calendars', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ calendars: calendars ? [{ id: 0, category: '', label: '' }] : [] }),
+    }),
+  );
+
+  await page.route((url) => url.pathname === '/api/calendar', (route) =>
     route.fulfill({ status: 200, contentType: 'text/calendar', body: CALENDAR_FEED }),
   );
 
@@ -154,11 +163,10 @@ async function preparePage(context, { items = ITEMS, annual = ANNUAL, calendars 
     weekStartsOn: 1,
     weather: { enabled: false },
     familyNames: ['Lili', 'Ruby', 'Max'],
-    calendars: calendars ? ['https://example.com/family.ics'] : [],
   };
 
   // Stand in for what tools/build-config.mjs writes at deploy time.
-  await page.route('**/config.generated.js', (route) =>
+  await page.route((url) => url.pathname === '/config.generated.js', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'text/javascript; charset=utf-8',
