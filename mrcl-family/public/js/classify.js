@@ -141,6 +141,10 @@ export function extractPerson(rawTitle, names = []) {
     const leading = new RegExp(`^${escapeRegExp(name)}(?:'s|s'|s)?\\b[\\s:'-]*`, 'i');
     if (leading.test(title)) {
       const remainder = title.replace(leading, '').trim();
+      // "Morgan and Chris eye appointment" is about two people: lifting the
+      // first one out would leave "and Chris eye appointment", which reads as
+      // a mistake. Record who it starts with and leave the wording alone.
+      if (/^(and|&|\+)\b/i.test(remainder)) return { who: name, title };
       // Only lift the name out if something is left to show.
       return { who: name, title: remainder || title };
     }

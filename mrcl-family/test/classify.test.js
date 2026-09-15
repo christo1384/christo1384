@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { classify, extractPerson, stripPrefix, stripRedundantTime, toBoardItem } from '../public/js/classify.js';
 
 const NAMES = ['Lili', 'Ruby', 'Max', 'Chris'];
+// The real family, longest form first so "Lili" cannot shadow "Liliani".
+const MRCL = ['Liliani', 'Lili', 'Morgan', 'Regan', 'Chris'];
 
 test('real entries from the family calendar land in sensible rows', () => {
   assert.equal(classify('Lili Ortho 8.20am'), 'appointment');
@@ -105,6 +107,41 @@ test('a feed pinned to one row overrides the classifier', () => {
     { names: NAMES, defaultCategory: 'note' },
   );
   assert.equal(item.category, 'note');
+});
+
+test('the real family calendar, entry by entry', () => {
+  const cases = [
+    // [title, time, expected category, expected who, expected title]
+    ['Lili Ortho 8.20am', '08:20', 'appointment', 'Lili', 'Ortho'],
+    ['Liliani ortho appt 9am', '09:00', 'appointment', 'Liliani', 'ortho appt'],
+    ['Lili eye appointment super clinic 12:45', '10:30', 'appointment', 'Lili', 'eye appointment super clinic 12:45'],
+    ['Regan physio 3pm', '15:00', 'appointment', 'Regan', 'physio'],
+    ['Family outing: Auckland Zoo', '', 'family', '', 'Auckland Zoo'],
+    ['Twist Lilis plate', '', 'appointment', 'Lili', 'Twist Lilis plate'],
+  ];
+
+  for (const [title, time, category, who, expected] of cases) {
+    const item = toBoardItem({ title, time, date: '2026-10-27', uid: 'x' }, { names: MRCL });
+    assert.equal(item.category, category, title);
+    assert.equal(item.who, who, title);
+    assert.equal(item.title, expected, title);
+  }
+});
+
+test('an entry about two people keeps its wording', () => {
+  const item = toBoardItem(
+    { title: 'Morgan and Chris eye appointment', time: '13:00', date: '2026-07-25', uid: 'y' },
+    { names: MRCL },
+  );
+  assert.equal(item.category, 'appointment');
+  assert.equal(item.who, 'Morgan');
+  // Not "and Chris eye appointment".
+  assert.equal(item.title, 'Morgan and Chris eye appointment');
+});
+
+test('a short name does not shadow a longer one that starts the same way', () => {
+  assert.deepEqual(extractPerson('Liliani ortho', MRCL), { who: 'Liliani', title: 'ortho' });
+  assert.deepEqual(extractPerson('Lili ortho', MRCL), { who: 'Lili', title: 'ortho' });
 });
 
 test('toBoardItem never produces an empty title', () => {
