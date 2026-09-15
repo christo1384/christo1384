@@ -57,6 +57,18 @@ What is left over — "home late", what's for dinner — goes in through **one
 box**: `soccer thu 4pm lili`. The six-field form is still there behind "More
 detail", but it is no longer the front door (`public/js/quickadd.js`).
 
+**Things that happen every week** — bins night, swimming — are set once and
+repeat, so the chore row is usable without cluttering the shared calendar with
+a recurring event nobody wants to see in their own week view.
+
+**The shopping list** is a rolling list, not part of any week: added to from the
+kitchen, ticked off in the supermarket. Tapping anywhere on a row is the tick
+target, because that is done one-handed in an aisle. Adding milk twice when it
+is already ticked revives the line rather than making a second one. The board
+does not show the list — a screen on a wall has no way to add to it — but it
+does show how many things are still needed, which is the part worth being
+reminded of.
+
 ## What it does
 
 **The board** (`/`) — for the kitchen screen. Always the current week, rebuilds
@@ -85,7 +97,7 @@ out the age ("Ruby turns 9"), and the entry appears on the right day annually.
 | `public/js/ics.js` | iCalendar reader, including repeating events. |
 | `public/js/classify.js` | Turns a calendar entry into a board row and a person. |
 | `public/js/quickadd.js` | Turns one typed line into an item. |
-| `public/js/item.js` | The shape of an item, and what may be written. |
+| `public/js/item.js` | The shape of an item and a shopping line, and what may be written. |
 | `public/js/config.js` | Defaults, merged with what the build injected. |
 | `server.mjs` | The whole service: pages, API and calendar proxy in one process. |
 | `src/board-api.mjs` | The API itself, independent of any host. |
@@ -129,9 +141,9 @@ To try it against real calendars locally, create a gitignored
 ## Tests
 
 ```sh
-npm test                              # 131 logic tests
+npm test                              # 148 logic tests
 npm install --no-save playwright      # only needed for the browser suite
-npm run test:browser                  # 66 checks across both pages in Chromium
+npm run test:browser                  # 80 checks across both pages in Chromium
 ```
 
 The browser suite stubs the board API and the calendar feed, freezes the clock,

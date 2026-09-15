@@ -141,6 +141,24 @@ there. The calendar stays the single source of truth.
 
 ---
 
+## What the board holds itself
+
+Three things do not belong in a calendar and live on the board instead:
+
+**One-offs** — "home late", what's for dinner. Filed against the week.
+
+**Weekly repeats** — bins night, swimming. Set the repeat to *Every week* and it
+lands on that weekday from then on, without a recurring calendar event
+appearing in everyone's own week view. It never backfills the weeks before it
+was created.
+
+**The shopping list** — a rolling list, not part of any week. Added to from the
+kitchen, ticked off in the supermarket; tapping the row is the tick. "Clear
+what is in the trolley" removes the ticked ones and keeps the rest. The kitchen
+screen shows only a count, because a screen on a wall cannot be added to.
+
+---
+
 ## The screens
 
 **The kitchen screen:** open the `?k=` link once, then leave `/` on screen. It

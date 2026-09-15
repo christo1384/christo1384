@@ -1,7 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { itemSubtitle, MAX_TITLE, MAX_WHO, normaliseItem, validateItem } from '../public/js/item.js';
+import {
+  isRepeating,
+  itemSubtitle,
+  MAX_TITLE,
+  MAX_WHO,
+  normaliseItem,
+  validateItem,
+  validateShoppingItem,
+} from '../public/js/item.js';
 
 test('normaliseItem trims, collapses whitespace and truncates', () => {
   const value = normaliseItem({ title: '  Soccer   practice  ', who: ' Ruby ', category: 'sport', date: '2026-07-16' });
@@ -26,10 +34,33 @@ test('normaliseItem keeps only well-formed times', () => {
   assert.equal(normaliseItem({}).time, '');
 });
 
-test('normaliseItem coerces the booleans', () => {
-  assert.equal(normaliseItem({ annual: 'yes' }).annual, true);
-  assert.equal(normaliseItem({}).annual, false);
+test('normaliseItem reads how an item repeats', () => {
+  assert.equal(normaliseItem({}).repeat, 'none');
+  assert.equal(normaliseItem({ repeat: 'weekly' }).repeat, 'weekly');
+  assert.equal(normaliseItem({ repeat: 'annual' }).repeat, 'annual');
+  assert.equal(normaliseItem({ repeat: 'fortnightly' }).repeat, 'none');
+  // The older shape still works.
+  assert.equal(normaliseItem({ annual: true }).repeat, 'annual');
   assert.equal(normaliseItem({ done: 1 }).done, true);
+});
+
+test('isRepeating tells the two kinds of item apart', () => {
+  assert.equal(isRepeating({ repeat: 'weekly' }), true);
+  assert.equal(isRepeating({ repeat: 'annual' }), true);
+  assert.equal(isRepeating({ repeat: 'none' }), false);
+  assert.equal(isRepeating({}), false);
+  assert.equal(isRepeating({ annual: true }), true);
+});
+
+test('a shopping item needs a name and nothing else', () => {
+  const ok = validateShoppingItem({ title: '  Milk  ' });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.value.title, 'Milk');
+  assert.equal(ok.value.done, false);
+
+  const bad = validateShoppingItem({ title: '   ' });
+  assert.equal(bad.ok, false);
+  assert.match(bad.errors[0].message, /what do we need/i);
 });
 
 test('a good item validates', () => {

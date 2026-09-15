@@ -63,9 +63,13 @@
           <input id="who" name="who" type="text" maxlength="40" autocomplete="off" placeholder="Ruby" />
         </div>
 
-        <div class="field check" data-annual-field hidden>
-          <input id="annual" name="annual" type="checkbox" />
-          <label for="annual">Every year</label>
+        <div class="field">
+          <label for="repeat">Repeat</label>
+          <select id="repeat" name="repeat">
+            <option value="none">Just once</option>
+            <option value="weekly">Every week</option>
+            <option value="annual">Every year</option>
+          </select>
         </div>
 
         <button class="primary" type="submit" data-submit>Add to the week</button>
@@ -81,6 +85,26 @@
       <button class="ghost" type="button" data-today hidden>Back to this week</button>
 
       <div data-list></div>
+
+      <section class="shopping" aria-labelledby="shopping-heading">
+        <h2 id="shopping-heading">
+          Shopping list
+          <span class="row-meta" data-shopping-count></span>
+        </h2>
+
+        <form class="card" data-shopping-form novalidate>
+          <div class="field">
+            <label for="shopping-input">Add to the list</label>
+            <input id="shopping-input" name="shopping" type="text" autocomplete="off"
+                   enterkeyhint="done" maxlength="80" placeholder="milk" />
+          </div>
+          <button class="primary" type="submit" data-shopping-submit>Add</button>
+          <p class="message" data-shopping-message role="status" aria-live="polite"></p>
+        </form>
+
+        <div data-shopping-list></div>
+        <button class="ghost" type="button" data-shopping-clear hidden>Clear what is in the trolley</button>
+      </section>
     </div>
 
 

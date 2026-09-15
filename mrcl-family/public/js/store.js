@@ -42,9 +42,9 @@ export function fetchWeek(days, options = {}) {
 
 /**
  * Poll a week until the returned function is called.
- * `onChange` gets { items, ticks, annual } and only fires when something
- * actually changed, so the board does not re-render every 15 seconds for
- * nothing.
+ * `onChange` gets { items, ticks, repeating, shopping } and only fires when
+ * something actually changed, so the board does not re-render every 15 seconds
+ * for nothing.
  */
 export function subscribeToWeek(days, onChange, onError = () => {}, { intervalMs = POLL_MS } = {}) {
   let stopped = false;
@@ -57,10 +57,15 @@ export function subscribeToWeek(days, onChange, onError = () => {}, { intervalMs
       const payload = await fetchWeek(days);
       if (stopped) return;
 
-      const fingerprint = JSON.stringify([payload.items, payload.ticks, payload.annual]);
+      const fingerprint = JSON.stringify([payload.items, payload.ticks, payload.repeating, payload.shopping]);
       if (fingerprint !== lastSeen) {
         lastSeen = fingerprint;
-        onChange({ items: payload.items || [], ticks: payload.ticks || {}, annual: payload.annual || [] });
+        onChange({
+          items: payload.items || [],
+          ticks: payload.ticks || {},
+          repeating: payload.repeating || [],
+          shopping: payload.shopping || [],
+        });
       }
       onError('');
     } catch (error) {
@@ -86,17 +91,17 @@ export async function addItem(input, days) {
   return payload.id;
 }
 
-export async function updateItem(id, patch, { days, annual = false } = {}) {
+export async function updateItem(id, patch, { days, repeating = false } = {}) {
   await call({
     method: 'POST',
-    body: { op: 'patch', id, patch, annual, week: days ? weekKeyFor(days) : undefined },
+    body: { op: 'patch', id, patch, repeating, week: days ? weekKeyFor(days) : undefined },
   });
 }
 
-export async function deleteItem(id, { days, annual = false } = {}) {
+export async function deleteItem(id, { days, repeating = false } = {}) {
   await call({
     method: 'POST',
-    body: { op: 'delete', id, annual, week: days ? weekKeyFor(days) : undefined },
+    body: { op: 'delete', id, repeating, week: days ? weekKeyFor(days) : undefined },
   });
 }
 
@@ -111,6 +116,26 @@ export function setDone(id, done, context) {
  */
 export async function setTick(key, done, days) {
   await call({ method: 'POST', body: { op: 'tick', week: weekKeyFor(days), key, done: Boolean(done) } });
+}
+
+/* ------------------------------------------------------------ shopping list */
+
+export async function addShoppingItem(title, who = '') {
+  const payload = await call({ method: 'POST', body: { op: 'shopping-add', item: { title, who } } });
+  return payload.id;
+}
+
+export function setShoppingDone(id, done) {
+  return call({ method: 'POST', body: { op: 'shopping-toggle', id, done: Boolean(done) } });
+}
+
+export function deleteShoppingItem(id) {
+  return call({ method: 'POST', body: { op: 'shopping-delete', id } });
+}
+
+/** Clear what is in the trolley, keep what is still needed. */
+export function clearBoughtShopping() {
+  return call({ method: 'POST', body: { op: 'shopping-clear-bought' } });
 }
 
 /** A stable per-occurrence key for a calendar event. */

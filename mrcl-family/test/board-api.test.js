@@ -78,7 +78,8 @@ test('a new week reads back empty', async () => {
   assert.equal(status, 200);
   assert.deepEqual(body.items, []);
   assert.deepEqual(body.ticks, {});
-  assert.deepEqual(body.annual, []);
+  assert.deepEqual(body.repeating, []);
+  assert.deepEqual(body.shopping, []);
 });
 
 test('a week must be a real date', async () => {
@@ -154,20 +155,104 @@ test('delete removes the item', async () => {
   assert.deepEqual((await call(get(`/api/board?week=${WEEK}`), options)).body.items, []);
 });
 
-test('annual items are kept apart from any one week', async () => {
+test('repeating items are kept apart from any one week', async () => {
   const options = { store: await freshStore(), feeds: [] };
   await call(
-    post({ op: 'add', week: WEEK, item: { title: 'Ruby', category: 'birthday', date: '2017-07-16', annual: true } }),
+    post({ op: 'add', week: WEEK, item: { title: 'Ruby', category: 'birthday', date: '2017-07-16', repeat: 'annual' } }),
+    options,
+  );
+  await call(
+    post({ op: 'add', week: WEEK, item: { title: 'Bins out', category: 'chore', date: '2026-07-14', repeat: 'weekly' } }),
     options,
   );
 
   const thisWeek = await call(get(`/api/board?week=${WEEK}`), options);
   assert.equal(thisWeek.body.items.length, 0);
-  assert.equal(thisWeek.body.annual.length, 1);
+  assert.equal(thisWeek.body.repeating.length, 2);
 
   // And they are there from any other week too.
   const otherWeek = await call(get('/api/board?week=2026-11-02'), options);
-  assert.equal(otherWeek.body.annual.length, 1);
+  assert.equal(otherWeek.body.repeating.length, 2);
+});
+
+test('a repeating item is edited in its own bucket', async () => {
+  const options = { store: await freshStore(), feeds: [] };
+  const { body: added } = await call(
+    post({ op: 'add', week: WEEK, item: { title: 'Bins out', category: 'chore', date: '2026-07-14', repeat: 'weekly' } }),
+    options,
+  );
+
+  const patched = await call(
+    post({ op: 'patch', repeating: true, id: added.id, patch: { title: 'Bins and recycling' } }),
+    options,
+  );
+  assert.equal(patched.status, 200);
+  assert.equal(patched.body.item.title, 'Bins and recycling');
+  assert.equal(patched.body.item.repeat, 'weekly');
+
+  await call(post({ op: 'delete', repeating: true, id: added.id }), options);
+  assert.deepEqual((await call(get(`/api/board?week=${WEEK}`), options)).body.repeating, []);
+});
+
+/* --------------------------------------------------------------- shopping */
+
+test('the shopping list survives the round trip', async () => {
+  const options = { store: await freshStore(), feeds: [] };
+  const added = await call(post({ op: 'shopping-add', item: { title: 'Milk' } }), options);
+  assert.equal(added.status, 201);
+
+  const read = await call(get(`/api/board?week=${WEEK}`), options);
+  assert.deepEqual(read.body.shopping.map((i) => i.title), ['Milk']);
+  assert.equal(read.body.shopping[0].done, false);
+});
+
+test('a shopping item needs a name', async () => {
+  const options = { store: await freshStore(), feeds: [] };
+  const bad = await call(post({ op: 'shopping-add', item: { title: '  ' } }), options);
+  assert.equal(bad.status, 400);
+  assert.match(bad.body.error, /what do we need/i);
+});
+
+test('adding the same thing twice revives it rather than duplicating', async () => {
+  const options = { store: await freshStore(), feeds: [] };
+  const { body: first } = await call(post({ op: 'shopping-add', item: { title: 'Milk' } }), options);
+  await call(post({ op: 'shopping-toggle', id: first.id, done: true }), options);
+
+  // Somebody adds milk again without noticing it is already ticked.
+  await call(post({ op: 'shopping-add', item: { title: 'milk' } }), options);
+
+  const read = await call(get(`/api/board?week=${WEEK}`), options);
+  assert.equal(read.body.shopping.length, 1);
+  assert.equal(read.body.shopping[0].done, false);
+});
+
+test('ticking off and clearing the trolley', async () => {
+  const options = { store: await freshStore(), feeds: [] };
+  const { body: milk } = await call(post({ op: 'shopping-add', item: { title: 'Milk' } }), options);
+  await call(post({ op: 'shopping-add', item: { title: 'Bread' } }), options);
+
+  await call(post({ op: 'shopping-toggle', id: milk.id, done: true }), options);
+  let read = await call(get(`/api/board?week=${WEEK}`), options);
+  assert.equal(read.body.shopping.find((i) => i.title === 'Milk').done, true);
+  assert.equal(read.body.shopping.length, 2, 'ticked off, not removed');
+
+  const cleared = await call(post({ op: 'shopping-clear-bought' }), options);
+  assert.equal(cleared.body.remaining, 1);
+
+  read = await call(get(`/api/board?week=${WEEK}`), options);
+  assert.deepEqual(read.body.shopping.map((i) => i.title), ['Bread']);
+});
+
+test('a shopping item can be removed outright', async () => {
+  const options = { store: await freshStore(), feeds: [] };
+  const { body: milk } = await call(post({ op: 'shopping-add', item: { title: 'Milk' } }), options);
+  await call(post({ op: 'shopping-delete', id: milk.id }), options);
+  assert.deepEqual((await call(get(`/api/board?week=${WEEK}`), options)).body.shopping, []);
+});
+
+test('toggling something that is not there needs an id', async () => {
+  const options = { store: await freshStore(), feeds: [] };
+  assert.equal((await call(post({ op: 'shopping-toggle', done: true }), options)).status, 400);
 });
 
 test('a calendar entry can be ticked off and un-ticked', async () => {

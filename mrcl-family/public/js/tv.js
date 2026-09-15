@@ -26,6 +26,7 @@ const els = {
   status: document.querySelector('[data-status]'),
   hint: document.querySelector('[data-hint]'),
   calendarHint: document.querySelector('[data-calendar-hint]'),
+  shoppingHint: document.querySelector('[data-shopping-hint]'),
   app: document.querySelector('[data-app]'),
 };
 
@@ -33,7 +34,8 @@ const state = {
   days: [],
   weekKey: '',
   liveItems: [],
-  annualItems: [],
+  repeatingItems: [],
+  shopping: [],
   ticks: {},
   calendarItems: [],
   forecast: {},
@@ -172,7 +174,7 @@ function renderWeather() {
 
 /** Everything the board shows: the calendar, plus what the board itself holds. */
 function allItems() {
-  const own = itemsForWeek([...state.liveItems, ...state.annualItems], state.days);
+  const own = itemsForWeek([...state.liveItems, ...state.repeatingItems], state.days);
   // A calendar event can be ticked off without the calendar ever being touched.
   const fromCalendar = state.calendarItems.map((item) => ({
     ...item,
@@ -189,7 +191,19 @@ function render() {
     renderBand(cat.band === 'top' ? els.bandTop : els.bandBottom, cat, all, state.days);
   }
   renderWeather();
+  renderShoppingHint();
   renderStatus(all.length);
+}
+
+/**
+ * The shopping list itself lives on the phone — a screen on a wall has no way
+ * to add to it. What the board is good for is the reminder that it exists.
+ */
+function renderShoppingHint() {
+  if (!els.shoppingHint) return;
+  const outstanding = state.shopping.filter((i) => !i.done).length;
+  els.shoppingHint.hidden = outstanding === 0;
+  els.shoppingHint.textContent = `🛒 ${outstanding} on the shopping list`;
 }
 
 function renderStatus(count) {
@@ -242,10 +256,11 @@ function showWeek(anchor) {
   state.unsubscribe?.();
   state.unsubscribe = subscribeToWeek(
     state.days,
-    ({ items, ticks, annual }) => {
+    ({ items, ticks, repeating, shopping }) => {
       state.liveItems = items;
       state.ticks = ticks;
-      state.annualItems = annual;
+      state.repeatingItems = repeating;
+      state.shopping = shopping;
       state.error = '';
       render();
     },

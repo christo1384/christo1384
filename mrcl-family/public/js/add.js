@@ -14,7 +14,19 @@ import { CONFIG } from './config.js';
 import { fetchCalendarItems, listFeeds } from './calendar.js';
 import { DEFAULT_CATEGORY, itemSubtitle, validateItem } from './item.js';
 import { describeDraft, parseQuickAdd } from './quickadd.js';
-import { addItem, deleteItem, setDone, setTick, subscribeToWeek, tickKey, updateItem } from './store.js';
+import {
+  addItem,
+  addShoppingItem,
+  clearBoughtShopping,
+  deleteItem,
+  deleteShoppingItem,
+  setDone,
+  setShoppingDone,
+  setTick,
+  subscribeToWeek,
+  tickKey,
+  updateItem,
+} from './store.js';
 import { addWeeks, buildWeek, compareItems, formatTime, fromISODate, itemsForWeek, toISODate, weekLabel } from './week.js';
 
 const els = {
@@ -31,8 +43,14 @@ const els = {
   cancel: document.querySelector('[data-cancel]'),
   message: document.querySelector('[data-message]'),
   categorySelect: document.querySelector('[name="category"]'),
-  annualField: document.querySelector('[data-annual-field]'),
-  annualInput: document.querySelector('[name="annual"]'),
+  repeatSelect: document.querySelector('[name="repeat"]'),
+  shoppingForm: document.querySelector('[data-shopping-form]'),
+  shoppingInput: document.querySelector('#shopping-input'),
+  shoppingSubmit: document.querySelector('[data-shopping-submit]'),
+  shoppingMessage: document.querySelector('[data-shopping-message]'),
+  shoppingList: document.querySelector('[data-shopping-list]'),
+  shoppingCount: document.querySelector('[data-shopping-count]'),
+  shoppingClear: document.querySelector('[data-shopping-clear]'),
   range: document.querySelector('[data-week-range]'),
   prev: document.querySelector('[data-prev]'),
   next: document.querySelector('[data-next]'),
@@ -45,11 +63,12 @@ const state = {
   anchor: new Date(),
   days: [],
   ownItems: [],
-  annualItems: [],
+  repeatingItems: [],
+  shopping: [],
   ticks: {},
   calendarItems: [],
   editingId: null,
-  editingAnnual: false,
+  editingRepeating: false,
   unsubscribe: null,
 };
 
@@ -149,11 +168,10 @@ function fillCategories() {
   els.categorySelect.value = DEFAULT_CATEGORY;
 }
 
-function syncAnnualVisibility() {
-  const isBirthday = els.categorySelect.value === 'birthday';
-  els.annualField.hidden = !isBirthday;
-  if (isBirthday && !state.editingId) els.annualInput.checked = true;
-  if (!isBirthday) els.annualInput.checked = false;
+/** A birthday is almost always yearly; everything else is almost always once. */
+function suggestRepeat() {
+  if (state.editingId) return;
+  els.repeatSelect.value = els.categorySelect.value === 'birthday' ? 'annual' : 'none';
 }
 
 function readForm() {
@@ -164,7 +182,7 @@ function readForm() {
     who: data.get('who'),
     date: data.get('date'),
     time: data.get('time'),
-    annual: els.annualInput.checked,
+    repeat: data.get('repeat'),
   };
 }
 
@@ -173,25 +191,26 @@ function resetForm({ keepDate = true } = {}) {
   els.form.reset();
   els.form.elements.date.value = date || toISODate(new Date());
   els.categorySelect.value = DEFAULT_CATEGORY;
+  els.repeatSelect.value = 'none';
   state.editingId = null;
-  state.editingAnnual = false;
+  state.editingRepeating = false;
   els.formTitle.textContent = 'Add to the week';
   els.submit.textContent = 'Add to the week';
   els.cancel.hidden = true;
-  syncAnnualVisibility();
+  suggestRepeat();
 }
 
 function startEditing(item) {
+  const repeat = item.repeat || (item.annual ? 'annual' : 'none');
   state.editingId = item.id;
-  state.editingAnnual = Boolean(item.annual);
+  state.editingRepeating = repeat !== 'none';
   els.form.hidden = false;
   els.form.elements.title.value = item.title;
   els.form.elements.category.value = item.category;
   els.form.elements.who.value = item.who || '';
   els.form.elements.date.value = item.date;
   els.form.elements.time.value = item.time || '';
-  els.annualInput.checked = Boolean(item.annual);
-  els.annualField.hidden = item.category !== 'birthday';
+  els.repeatSelect.value = repeat;
   els.formTitle.textContent = 'Edit';
   els.submit.textContent = 'Save changes';
   els.cancel.hidden = false;
@@ -216,7 +235,7 @@ async function onSubmit(event) {
     }
 
     if (state.editingId) {
-      await updateItem(state.editingId, input, { days: state.days, annual: state.editingAnnual });
+      await updateItem(state.editingId, input, { days: state.days, repeating: state.editingRepeating });
       say(els.message, 'Saved.', 'is-ok');
       resetForm();
       els.form.hidden = true;
@@ -268,11 +287,12 @@ function rowNode(item) {
   const done = el('button', 'ghost', item.done ? 'Undo' : 'Done');
   done.type = 'button';
   done.setAttribute('aria-label', `${item.done ? 'Un-tick' : 'Tick off'} ${item.title}`);
+  const repeating = Boolean(item.repeat && item.repeat !== 'none') || Boolean(item.annual);
   done.addEventListener('click', () =>
     guard(done, () =>
       item.readOnly
         ? setTick(tickKey(item), !item.done, state.days)
-        : setDone(item.id, !item.done, { days: state.days, annual: item.annual }),
+        : setDone(item.id, !item.done, { days: state.days, repeating }),
     ),
   );
   actions.append(done);
@@ -289,7 +309,7 @@ function rowNode(item) {
     remove.setAttribute('aria-label', `Delete ${item.title}`);
     remove.addEventListener('click', () => {
       if (!window.confirm(`Delete "${item.title}"?`)) return;
-      guard(remove, () => deleteItem(item.id, { days: state.days, annual: item.annual }));
+      guard(remove, () => deleteItem(item.id, { days: state.days, repeating }));
     });
     actions.append(remove);
   }
@@ -299,7 +319,7 @@ function rowNode(item) {
 }
 
 function allItems() {
-  const own = itemsForWeek([...state.ownItems, ...state.annualItems], state.days);
+  const own = itemsForWeek([...state.ownItems, ...state.repeatingItems], state.days);
   const fromCalendar = state.calendarItems.map((item) => ({
     ...item,
     done: Boolean(state.ticks[tickKey(item)]),
@@ -333,6 +353,69 @@ function renderList() {
   }
 }
 
+/* ------------------------------------------------------------ shopping list */
+
+function shoppingRow(item) {
+  const row = el('div', 'shop-row');
+  if (item.done) row.classList.add('is-done');
+
+  const toggle = el('button', 'shop-toggle');
+  toggle.type = 'button';
+  toggle.setAttribute('aria-pressed', String(Boolean(item.done)));
+  toggle.setAttribute('aria-label', `${item.done ? 'Put back on the list' : 'Got'} ${item.title}`);
+  toggle.append(el('span', 'box', item.done ? '✓' : ''));
+  toggle.append(el('span', 'shop-title', item.title));
+  toggle.addEventListener('click', () => guard(toggle, () => setShoppingDone(item.id, !item.done)));
+  row.append(toggle);
+
+  const remove = el('button', 'shop-remove', '✕');
+  remove.type = 'button';
+  remove.setAttribute('aria-label', `Remove ${item.title}`);
+  remove.addEventListener('click', () => guard(remove, () => deleteShoppingItem(item.id)));
+  row.append(remove);
+
+  return row;
+}
+
+function renderShopping() {
+  const items = state.shopping;
+  const outstanding = items.filter((i) => !i.done).length;
+  const bought = items.length - outstanding;
+
+  els.shoppingCount.textContent = items.length ? `${outstanding} to get` : '';
+  els.shoppingClear.hidden = bought === 0;
+  els.shoppingClear.textContent = `Clear ${bought} in the trolley`;
+
+  els.shoppingList.replaceChildren();
+  if (!items.length) {
+    els.shoppingList.append(el('p', 'empty-week', 'Nothing on the list.'));
+    return;
+  }
+
+  // Still needed first; what is already in the trolley sinks to the bottom.
+  const ordered = [...items].sort((a, b) => Number(a.done) - Number(b.done));
+  for (const item of ordered) els.shoppingList.append(shoppingRow(item));
+}
+
+async function onShoppingSubmit(event) {
+  event.preventDefault();
+  const title = els.shoppingInput.value.trim();
+  if (!title) return;
+
+  els.shoppingSubmit.disabled = true;
+  say(els.shoppingMessage, '');
+  try {
+    await addShoppingItem(title);
+    els.shoppingInput.value = '';
+    els.shoppingInput.focus();
+    refresh();
+  } catch (error) {
+    say(els.shoppingMessage, error.message || 'Could not add that.', 'is-error');
+  } finally {
+    els.shoppingSubmit.disabled = false;
+  }
+}
+
 function loadCalendars() {
   fetchCalendarItems(state.days)
     .then((items) => {
@@ -359,11 +442,13 @@ function showWeek(anchor, { keepMessages = false } = {}) {
   state.unsubscribe?.();
   state.unsubscribe = subscribeToWeek(
     state.days,
-    ({ items, ticks, annual }) => {
+    ({ items, ticks, repeating, shopping }) => {
       state.ownItems = items;
       state.ticks = ticks;
-      state.annualItems = annual;
+      state.repeatingItems = repeating;
+      state.shopping = shopping;
       renderList();
+      renderShopping();
     },
     (message) => {
       if (message) say(els.message, message, 'is-error');
@@ -372,6 +457,7 @@ function showWeek(anchor, { keepMessages = false } = {}) {
 
   state.calendarItems = [];
   renderList();
+  renderShopping();
   loadCalendars();
 }
 
@@ -393,7 +479,11 @@ function start() {
   });
 
   els.form.addEventListener('submit', onSubmit);
-  els.categorySelect.addEventListener('change', syncAnnualVisibility);
+  els.categorySelect.addEventListener('change', suggestRepeat);
+  els.shoppingForm.addEventListener('submit', onShoppingSubmit);
+  els.shoppingClear.addEventListener('click', () =>
+    guard(els.shoppingClear, () => clearBoughtShopping()),
+  );
   els.cancel.addEventListener('click', () => {
     resetForm();
     els.form.hidden = true;

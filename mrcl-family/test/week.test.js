@@ -12,6 +12,8 @@ import {
   isLeapYear,
   itemsForWeek,
   placeAnnual,
+  placeRepeating,
+  placeWeekly,
   startOfWeek,
   toISODate,
   weekLabel,
@@ -144,16 +146,55 @@ test('29 February falls back to 28 February in a common year', () => {
   assert.equal(placeAnnual({ date: '2000-02-29', annual: true }, leap).date, '2028-02-29');
 });
 
+test('a weekly item lands on the same weekday every week', () => {
+  // Bins out on Tuesday 14 July.
+  const bins = { title: 'Bins out', date: '2026-07-14', repeat: 'weekly' };
+
+  const thisWeek = buildWeek(d(2026, 7, 15), { weekStartsOn: 1 });
+  assert.equal(placeWeekly(bins, thisWeek).date, '2026-07-14');
+
+  const nextWeek = buildWeek(d(2026, 7, 22), { weekStartsOn: 1 });
+  assert.equal(placeWeekly(bins, nextWeek).date, '2026-07-21');
+
+  // Still running months later.
+  const later = buildWeek(d(2026, 11, 4), { weekStartsOn: 1 });
+  assert.equal(new Date(placeWeekly(bins, later).date + 'T00:00:00').getDay(), 2);
+});
+
+test('a weekly item does not rewrite the weeks before it existed', () => {
+  const bins = { title: 'Bins out', date: '2026-07-14', repeat: 'weekly' };
+  const before = buildWeek(d(2026, 6, 10), { weekStartsOn: 1 });
+  assert.equal(placeWeekly(bins, before), null);
+
+  // The week it starts in still counts.
+  const starting = buildWeek(d(2026, 7, 15), { weekStartsOn: 1 });
+  assert.ok(placeWeekly(bins, starting));
+});
+
+test('placeWeekly rejects a broken date', () => {
+  assert.equal(placeWeekly({ date: 'rubbish', repeat: 'weekly' }, buildWeek(d(2026, 7, 15), { weekStartsOn: 1 })), null);
+});
+
+test('placeRepeating picks the right placement for each kind', () => {
+  const days = buildWeek(d(2026, 7, 15), { weekStartsOn: 1 });
+  assert.equal(placeRepeating({ date: '2026-07-14', repeat: 'weekly' }, days).date, '2026-07-14');
+  assert.equal(placeRepeating({ date: '2017-07-16', repeat: 'annual' }, days).date, '2026-07-16');
+  assert.equal(placeRepeating({ date: '2026-07-16', repeat: 'none' }, days), null);
+  // The older shape still repeats annually.
+  assert.equal(placeRepeating({ date: '2017-07-16', annual: true }, days).date, '2026-07-16');
+});
+
 test('itemsForWeek keeps in-week items and drops the rest', () => {
   const days = buildWeek(d(2026, 7, 15), { weekStartsOn: 1 });
   const items = [
     { id: 'a', title: 'Soccer', category: 'sport', date: '2026-07-16' },
     { id: 'b', title: 'Last week', category: 'chore', date: '2026-07-06' },
-    { id: 'c', title: 'Ruby', category: 'birthday', date: '2017-07-16', annual: true },
-    { id: 'd', title: 'Other birthday', category: 'birthday', date: '2017-01-01', annual: true },
+    { id: 'c', title: 'Ruby', category: 'birthday', date: '2017-07-16', repeat: 'annual' },
+    { id: 'd', title: 'Other birthday', category: 'birthday', date: '2017-01-01', repeat: 'annual' },
+    { id: 'e', title: 'Bins out', category: 'chore', date: '2026-07-14', repeat: 'weekly' },
   ];
   const kept = itemsForWeek(items, days);
-  assert.deepEqual(kept.map((i) => i.id).sort(), ['a', 'c']);
+  assert.deepEqual(kept.map((i) => i.id).sort(), ['a', 'c', 'e']);
 });
 
 test('groupByCategoryAndDay buckets and sorts each cell', () => {

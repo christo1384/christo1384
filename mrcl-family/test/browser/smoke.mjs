@@ -46,16 +46,17 @@ const FIXED_NOW = new Date(2026, 6, 15, 16, 30, 0).getTime();
 const WEEK = '2026-07-13';
 
 const ITEMS = [
-  { id: 'i1', title: 'Soccer practice', category: 'sport', date: '2026-07-16', time: '16:00', who: 'Ruby', done: false, annual: false },
-  { id: 'i2', title: 'Lasagne', category: 'dinner', date: '2026-07-16', time: '', done: false, annual: false },
-  { id: 'i3', title: 'Bins out', category: 'chore', date: '2026-07-14', time: '', done: true, annual: false },
-  { id: 'i4', title: 'Dentist', category: 'appointment', date: '2026-07-15', time: '09:15', done: false, annual: false },
-  { id: 'i6', title: 'Nana visiting', category: 'out', date: '2026-07-18', time: '', done: false, annual: false },
-  { id: 'i7', title: 'Out of range', category: 'chore', date: '2026-09-01', time: '', done: false, annual: false },
+  { id: 'i1', title: 'Soccer practice', category: 'sport', date: '2026-07-16', time: '16:00', who: 'Ruby', done: false, repeat: 'none' },
+  { id: 'i2', title: 'Lasagne', category: 'dinner', date: '2026-07-16', time: '', done: false, repeat: 'none' },
+  { id: 'i4', title: 'Dentist', category: 'appointment', date: '2026-07-15', time: '09:15', done: false, repeat: 'none' },
+  { id: 'i6', title: 'Nana visiting', category: 'out', date: '2026-07-18', time: '', done: false, repeat: 'none' },
+  { id: 'i7', title: 'Out of range', category: 'chore', date: '2026-09-01', time: '', done: false, repeat: 'none' },
 ];
 
 const ANNUAL = [
-  { id: 'a1', title: 'Ruby', category: 'birthday', date: '2017-07-16', time: '', annual: true, done: false },
+  { id: 'a1', title: 'Ruby', category: 'birthday', date: '2017-07-16', time: '', repeat: 'annual', done: false },
+  // Bins out every Tuesday, added the week before this one.
+  { id: 'a2', title: 'Bins out', category: 'chore', date: '2026-07-07', time: '', repeat: 'weekly', done: false },
 ];
 
 // A real-shaped family-calendar entry: it must classify itself into the
@@ -96,7 +97,13 @@ async function preparePage(context, { items = ITEMS, annual = ANNUAL, calendars 
 
   // A tiny in-browser stand-in for the board store, so a write really does
   // come back on the next read.
-  const store = { items: structuredClone(items), annual: structuredClone(annual), ticks: {}, counter: 0 };
+  const store = {
+    items: structuredClone(items),
+    repeating: structuredClone(annual),
+    shopping: [],
+    ticks: {},
+    counter: 0,
+  };
 
   await page.route((url) => url.pathname === '/api/board', async (route) => {
     if (boardDown) {
@@ -109,7 +116,13 @@ async function preparePage(context, { items = ITEMS, annual = ANNUAL, calendars 
       route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
     if (request.method() === 'GET') {
-      await reply({ week: WEEK, items: store.items, ticks: store.ticks, annual: store.annual });
+      await reply({
+        week: WEEK,
+        items: store.items,
+        ticks: store.ticks,
+        repeating: store.repeating,
+        shopping: store.shopping,
+      });
       return;
     }
 
@@ -117,13 +130,39 @@ async function preparePage(context, { items = ITEMS, annual = ANNUAL, calendars 
     if (body.op === 'add') {
       store.counter += 1;
       const record = { ...body.item, id: `new_${store.counter}` };
-      if (body.item.annual) store.annual.push(record);
+      if (body.item.repeat && body.item.repeat !== 'none') store.repeating.push(record);
       else store.items.push(record);
       await reply({ id: record.id, item: record }, 201);
       return;
     }
+    if (body.op === 'shopping-add') {
+      store.counter += 1;
+      const existing = store.shopping.findIndex(
+        (i) => i.title.toLowerCase() === String(body.item.title).trim().toLowerCase(),
+      );
+      if (existing !== -1) store.shopping[existing].done = false;
+      else store.shopping.push({ id: `shop_${store.counter}`, title: String(body.item.title).trim(), done: false });
+      await reply({ ok: true }, 201);
+      return;
+    }
+    if (body.op === 'shopping-toggle') {
+      const item = store.shopping.find((i) => i.id === body.id);
+      if (item) item.done = Boolean(body.done);
+      await reply({ ok: true });
+      return;
+    }
+    if (body.op === 'shopping-delete') {
+      store.shopping = store.shopping.filter((i) => i.id !== body.id);
+      await reply({ ok: true });
+      return;
+    }
+    if (body.op === 'shopping-clear-bought') {
+      store.shopping = store.shopping.filter((i) => !i.done);
+      await reply({ ok: true, remaining: store.shopping.length });
+      return;
+    }
     if (body.op === 'patch') {
-      const bucket = body.annual ? store.annual : store.items;
+      const bucket = body.repeating ? store.repeating : store.items;
       const index = bucket.findIndex((i) => i.id === body.id);
       if (index === -1) return reply({ error: 'gone' }, 404);
       bucket[index] = { ...bucket[index], ...body.patch };
@@ -132,7 +171,7 @@ async function preparePage(context, { items = ITEMS, annual = ANNUAL, calendars 
     }
     if (body.op === 'delete') {
       store.items = store.items.filter((i) => i.id !== body.id);
-      store.annual = store.annual.filter((i) => i.id !== body.id);
+      store.repeating = store.repeating.filter((i) => i.id !== body.id);
       await reply({ ok: true });
       return;
     }
@@ -219,9 +258,10 @@ async function testBoard(context) {
   check('soccer shows its time', (await soccer.first().innerText()).includes('4pm'));
   check('soccer shows who it is for', (await soccer.first().innerText()).includes('Ruby'));
 
+  // Added a week earlier and set to repeat; it has to turn up on this Tuesday.
   const bins = page.locator('.cell[data-category="chore"][data-iso="2026-07-14"] .entry');
-  check('a ticked-off chore is still on the board', (await bins.count()) === 1);
-  check('and is marked done', await bins.first().evaluate((el) => el.classList.contains('is-done')));
+  check('a weekly chore repeats into this week', (await bins.count()) === 1, await bins.count().then(String));
+  check('and reads correctly', (await bins.first().innerText()).includes('Bins out'));
 
   const outOfRange = await page.locator('.board .cell .entry', { hasText: 'Out of range' }).count();
   check('an item from another month is not shown', outOfRange === 0);
@@ -250,6 +290,7 @@ async function testBoard(context) {
   check('weather hides when it is switched off', await page.locator('[data-weather]').isHidden());
   // Five of the board's own items, one annual birthday, one from the calendar.
   check('status line counts the week', (await text(page, '[data-status]')).includes('7 things on this week'), await text(page, '[data-status]'));
+  check('nothing on the shopping list means no reminder', await page.locator('[data-shopping-hint]').isHidden());
 
   // The whole board must fit a TV without scrolling.
   const overflow = await page.evaluate(() => ({
@@ -305,11 +346,13 @@ async function testPhone(context) {
   check('"More detail" opens the full form', await page.locator('[data-form]').isVisible());
   check('the date defaults to today', (await page.inputValue('#date')) === '2026-07-15');
   check('every category is offered', (await page.locator('#category option').count()) === 8);
-  check('the yearly tick is hidden for a non-birthday', await page.locator('[data-annual-field]').isHidden());
+  check('repeat defaults to just once', (await page.inputValue('#repeat')) === 'none');
+  check('every repeat is offered', (await page.locator('#repeat option').count()) === 3);
 
   await page.selectOption('#category', 'birthday');
-  check('the yearly tick appears for a birthday', await page.locator('[data-annual-field]').isVisible());
-  check('and defaults to on', await page.isChecked('#annual'));
+  check('a birthday suggests yearly on its own', (await page.inputValue('#repeat')) === 'annual');
+  await page.selectOption('#category', 'chore');
+  check('and everything else goes back to once', (await page.inputValue('#repeat')) === 'none');
   await page.selectOption('#category', 'appointment');
 
   const before = await page.locator('.day-group .row').count();
@@ -409,6 +452,61 @@ async function testQuickAdd(context) {
   await page.close();
 }
 
+async function testShoppingList(context) {
+  console.log('\nThe shopping list');
+  const { page } = await preparePage(context);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE}/add`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('[data-shopping-list]', { timeout: 5000 });
+
+  check('it starts empty', (await text(page, '[data-shopping-list]')).includes('Nothing on the list'));
+  check('and offers nothing to clear', await page.locator('[data-shopping-clear]').isHidden());
+
+  await page.fill('#shopping-input', 'milk');
+  await page.click('[data-shopping-submit]');
+  await page.waitForSelector('.shop-row:has-text("milk")', { timeout: 8000 });
+  check('adding puts it on the list', (await page.locator('.shop-row').count()) === 1);
+  check('the box clears for the next thing', (await page.inputValue('#shopping-input')) === '');
+
+  await page.fill('#shopping-input', 'bread');
+  await page.click('[data-shopping-submit]');
+  await page.waitForSelector('.shop-row:has-text("bread")', { timeout: 8000 });
+  // innerText is the rendered text, and the heading is uppercased by CSS.
+  check('the count says what is still needed', /2 to get/i.test(await text(page, '[data-shopping-count]')), await text(page, '[data-shopping-count]'));
+
+  // Tapping the row is the whole target — one thumb, in a supermarket aisle.
+  await page.locator('.shop-row', { hasText: 'milk' }).first().locator('.shop-toggle').click();
+  await page.waitForSelector('.shop-row.is-done:has-text("milk")', { timeout: 8000 });
+  check('tapping a row puts it in the trolley', true);
+  check('the count drops', /1 to get/i.test(await text(page, '[data-shopping-count]')), await text(page, '[data-shopping-count]'));
+  check('it is still listed, not deleted', (await page.locator('.shop-row').count()) === 2);
+
+  // What is still needed sorts above what is already in the trolley.
+  const order = await page.locator('.shop-row .shop-title').allInnerTexts();
+  check('what is still needed comes first', order[0] === 'bread', order.join(','));
+
+  // Adding something already ticked revives it rather than duplicating.
+  await page.fill('#shopping-input', 'Milk');
+  await page.click('[data-shopping-submit]');
+  await page.waitForFunction(() => document.querySelectorAll('.shop-row.is-done').length === 0, null, { timeout: 8000 });
+  check('adding it again revives it instead of duplicating', (await page.locator('.shop-row').count()) === 2);
+
+  // Clear the trolley.
+  await page.locator('.shop-row', { hasText: 'bread' }).first().locator('.shop-toggle').click();
+  await page.waitForSelector('[data-shopping-clear]:not([hidden])', { timeout: 8000 });
+  check('a clear button appears once something is in the trolley', true);
+  await page.click('[data-shopping-clear]');
+  await page.waitForFunction(() => document.querySelectorAll('.shop-row').length === 1, null, { timeout: 8000 });
+  check('clearing keeps what is still needed', (await page.locator('.shop-row .shop-title').innerText()) === 'milk');
+
+  // And removing outright.
+  await page.locator('.shop-row').first().locator('.shop-remove').click();
+  await page.waitForFunction(() => document.querySelectorAll('.shop-row').length === 0, null, { timeout: 8000 });
+  check('an item can be removed outright', (await text(page, '[data-shopping-list]')).includes('Nothing on the list'));
+
+  await page.close();
+}
+
 async function testLegacyRedirect(context) {
   console.log('\nOld bookmarks');
   const { page } = await preparePage(context);
@@ -434,6 +532,7 @@ try {
   await testNoCalendars(context);
   await testPhone(context);
   await testQuickAdd(context);
+  await testShoppingList(context);
   await testLegacyRedirect(context);
 } finally {
   await browser.close();

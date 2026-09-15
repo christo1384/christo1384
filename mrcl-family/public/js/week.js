@@ -158,6 +158,27 @@ export function placeAnnual(item, days) {
   };
 }
 
+/**
+ * Place a weekly item (bins night, swimming) onto the same weekday of this
+ * week. Returns null for a week that finishes before the item was created, so
+ * adding "bins out" today does not rewrite last month.
+ */
+export function placeWeekly(item, days) {
+  const stored = fromISODate(item.date);
+  if (!stored) return null;
+  if (days[days.length - 1].date < stored) return null;
+
+  const match = days.find((d) => d.date.getDay() === stored.getDay());
+  return match ? { ...item, date: match.iso } : null;
+}
+
+/** Whichever placement an item's repeat calls for. */
+export function placeRepeating(item, days) {
+  if (item.repeat === 'weekly') return placeWeekly(item, days);
+  if (item.repeat === 'annual' || item.annual) return placeAnnual(item, days);
+  return null;
+}
+
 export function isLeapYear(year) {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
@@ -170,8 +191,9 @@ export function itemsForWeek(items, days) {
   const inWeek = new Set(days.map((d) => d.iso));
   const out = [];
   for (const item of items || []) {
-    if (item.annual) {
-      const placed = placeAnnual(item, days);
+    const repeats = (item.repeat && item.repeat !== 'none') || item.annual;
+    if (repeats) {
+      const placed = placeRepeating(item, days);
       if (placed) out.push(placed);
     } else if (inWeek.has(item.date)) {
       out.push(item);

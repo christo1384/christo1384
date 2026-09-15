@@ -6,10 +6,15 @@
 // function just as easily.
 
 import { occurrencesInRange } from '../public/js/ics.js';
-import { validateItem } from '../public/js/item.js';
+import { isRepeating, validateItem, validateShoppingItem } from '../public/js/item.js';
 
 const EMPTY_WEEK = { items: [], ticks: {} };
-const ANNUAL_KEY = 'annual';
+
+// Anything that repeats — weekly chores and annual birthdays — is kept out of
+// any one week, because it belongs to all of them.
+const REPEATING_KEY = 'repeating';
+const SHOPPING_KEY = 'shopping';
+const MAX_SHOPPING_ITEMS = 200;
 const WEEK_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_ITEMS_PER_WEEK = 200;
 const MAX_FEED_BYTES = 2 * 1024 * 1024;
@@ -36,6 +41,20 @@ function cleanItem(input) {
   const { ok, value, errors } = validateItem(input);
   if (!ok) throw fail(errors[0].message, 400);
   return value;
+}
+
+function cleanShoppingItem(input) {
+  const { ok, value, errors } = validateShoppingItem(input);
+  if (!ok) throw fail(errors[0].message, 400);
+  return value;
+}
+
+/** Which bucket an item lives in, and what an empty one looks like. */
+function bucketFor(body) {
+  const repeating = body.repeating ?? body.annual;
+  return repeating
+    ? { key: REPEATING_KEY, fallback: { items: [] } }
+    : { key: `week/${requireWeek(body.week)}`, fallback: EMPTY_WEEK };
 }
 
 function newId() {
@@ -78,16 +97,19 @@ export function parseFeeds(raw) {
 
 async function getBoard(store, url) {
   const week = requireWeek(url.searchParams.get('week'));
-  const [weekBlob, annualBlob] = await Promise.all([
+  const [weekBlob, repeatingBlob, shoppingBlob] = await Promise.all([
     store.get(`week/${week}`),
-    store.get(ANNUAL_KEY),
+    store.get(REPEATING_KEY),
+    store.get(SHOPPING_KEY),
   ]);
 
   return json({
     week,
     items: weekBlob?.items ?? [],
     ticks: weekBlob?.ticks ?? {},
-    annual: annualBlob?.items ?? [],
+    // The shopping list rides along so the phone gets everything in one poll.
+    repeating: repeatingBlob?.items ?? [],
+    shopping: shoppingBlob?.items ?? [],
   });
 }
 
@@ -96,8 +118,8 @@ async function addItem(store, body) {
   const now = new Date().toISOString();
   const record = { ...value, id: newId(), createdAt: now, updatedAt: now };
 
-  if (value.annual) {
-    await store.mutate(ANNUAL_KEY, { items: [] }, (current) => ({
+  if (isRepeating(value)) {
+    await store.mutate(REPEATING_KEY, { items: [] }, (current) => ({
       items: [...(current.items ?? []), record],
     }));
   } else {
@@ -115,8 +137,7 @@ async function patchItem(store, body) {
   const id = String(body.id || '');
   if (!id) throw fail('Which item?', 400);
 
-  const key = body.annual ? ANNUAL_KEY : `week/${requireWeek(body.week)}`;
-  const fallback = body.annual ? { items: [] } : EMPTY_WEEK;
+  const { key, fallback } = bucketFor(body);
 
   let updated = null;
   await store.mutate(key, fallback, (current) => {
@@ -140,8 +161,7 @@ async function patchItem(store, body) {
 
 async function deleteItem(store, body) {
   const id = String(body.id || '');
-  const key = body.annual ? ANNUAL_KEY : `week/${requireWeek(body.week)}`;
-  const fallback = body.annual ? { items: [] } : EMPTY_WEEK;
+  const { key, fallback } = bucketFor(body);
 
   await store.mutate(key, fallback, (current) => ({
     ...current,
@@ -165,7 +185,65 @@ async function setTick(store, body) {
   return json({ ok: true });
 }
 
-const ACTIONS = { add: addItem, patch: patchItem, delete: deleteItem, tick: setTick };
+/* ------------------------------------------------------------ shopping list */
+
+async function addShopping(store, body) {
+  const value = cleanShoppingItem(body.item);
+  const record = { ...value, id: newId(), createdAt: new Date().toISOString() };
+
+  await store.mutate(SHOPPING_KEY, { items: [] }, (current) => {
+    const items = current.items ?? [];
+    if (items.length >= MAX_SHOPPING_ITEMS) throw fail('The shopping list is full.', 409);
+
+    // Adding milk twice is a slip, not an instruction. Nudge the existing one
+    // back to not-done rather than making a second line.
+    const existing = items.findIndex((i) => i.title.toLowerCase() === value.title.toLowerCase());
+    if (existing !== -1) {
+      const next = [...items];
+      next[existing] = { ...next[existing], done: false };
+      return { items: next };
+    }
+    return { items: [...items, record] };
+  });
+  return json({ id: record.id, item: record }, 201);
+}
+
+async function toggleShopping(store, body) {
+  const id = String(body.id || '');
+  if (!id) throw fail('Which item?', 400);
+
+  await store.mutate(SHOPPING_KEY, { items: [] }, (current) => ({
+    items: (current.items ?? []).map((i) => (i.id === id ? { ...i, done: Boolean(body.done) } : i)),
+  }));
+  return json({ ok: true });
+}
+
+async function deleteShopping(store, body) {
+  const id = String(body.id || '');
+  await store.mutate(SHOPPING_KEY, { items: [] }, (current) => ({
+    items: (current.items ?? []).filter((i) => i.id !== id),
+  }));
+  return json({ ok: true });
+}
+
+/** Clear what is in the trolley, keep what is still needed. */
+async function clearBoughtShopping(store) {
+  const next = await store.mutate(SHOPPING_KEY, { items: [] }, (current) => ({
+    items: (current.items ?? []).filter((i) => !i.done),
+  }));
+  return json({ ok: true, remaining: next.items.length });
+}
+
+const ACTIONS = {
+  add: addItem,
+  patch: patchItem,
+  delete: deleteItem,
+  tick: setTick,
+  'shopping-add': addShopping,
+  'shopping-toggle': toggleShopping,
+  'shopping-delete': deleteShopping,
+  'shopping-clear-bought': clearBoughtShopping,
+};
 
 /* ---------------------------------------------------------------- calendar */
 
