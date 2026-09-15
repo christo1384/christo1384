@@ -131,17 +131,20 @@ createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
+    // Health is deliberately outside the gate: it reports only which store is
+    // in use and how many feeds are configured, and it is what tells you the
+    // service is awake without having the link to hand.
+    if (url.pathname === '/healthz') {
+      res.writeHead(200, { 'content-type': 'text/plain' });
+      return res.end(`ok store=${store.backend} feeds=${feeds.length}`);
+    }
+
     const blocked = gate(req, url);
     if (blocked) return await send(res, blocked);
 
     if (LEGACY[url.pathname]) {
       res.writeHead(301, { location: LEGACY[url.pathname] });
       return res.end();
-    }
-
-    if (url.pathname === '/healthz') {
-      res.writeHead(200, { 'content-type': 'text/plain' });
-      return res.end(`ok store=${store.backend} feeds=${feeds.length}`);
     }
 
     const body =

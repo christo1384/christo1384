@@ -104,6 +104,18 @@ test('calendar feeds are listed without their addresses', async (t) => {
   assert.deepEqual(JSON.parse(body).calendars, [{ id: 0, category: '', label: '' }]);
 });
 
+test('health is reachable without the key, and reveals nothing else', async (t) => {
+  const server = await boot({ ACCESS_KEY: 'test-key-abcdef', CALENDAR_ICS_URLS: 'https://calendar.google.com/ical/verysecret/basic.ics' });
+  t.after(() => server.stop());
+
+  const response = await fetch(`${server.url}/healthz`);
+  assert.equal(response.status, 200);
+  const body = await response.text();
+  assert.equal(body, 'ok store=memory feeds=1');
+  assert.equal(body.includes('verysecret'), false);
+  assert.equal(body.includes('test-key'), false);
+});
+
 test('without ACCESS_KEY the board is open', async (t) => {
   const server = await boot();
   t.after(() => server.stop());

@@ -87,20 +87,26 @@ out the age ("Ruby turns 9"), and the entry appears on the right day annually.
 | `public/js/quickadd.js` | Turns one typed line into an item. |
 | `public/js/item.js` | The shape of an item, and what may be written. |
 | `public/js/config.js` | Defaults, merged with what the build injected. |
-| `netlify/functions/board.mjs` | The board's own store, on Netlify Blobs. |
-| `netlify/functions/calendar.mjs` | Fetches .ics feeds the browser cannot reach. |
+| `server.mjs` | The whole service: pages, API and calendar proxy in one process. |
+| `src/board-api.mjs` | The API itself, independent of any host. |
+| `src/store.mjs` | Key Value, with a local snapshot behind it. |
 | `tools/build-config.mjs` | Turns environment variables into the deploy's config. |
-| `tools/dev-board.mjs` | In-memory stand-in for the store, for local work. |
-| `tools/serve.mjs` | Local preview server, no install required. |
 | `test/` | Node tests for the logic, a browser suite for the pages. |
 
-One runtime dependency, `@netlify/blobs`, used only by the functions. There is
-no Firebase, no second console, no auth provider and no SDK loaded from a CDN.
+One runtime dependency, `redis`. There is no Firebase, no second console, no
+auth provider and no SDK loaded from a CDN.
+
+## Where it runs
+
+Live at **https://mrcl-family.onrender.com** — one Render web service in
+Singapore, with a Render Key Value store behind it. Auto-deploys on push.
+Nothing about it is Render-specific: anything that can run `node server.mjs`
+will do.
 
 ## Running it locally
 
 ```sh
-npm run build     # writes public/config.generated.js
+npm install
 npm run dev       # http://localhost:8080
 ```
 
@@ -123,18 +129,22 @@ To try it against real calendars locally, create a gitignored
 ## Tests
 
 ```sh
-npm test                              # 102 logic tests
+npm test                              # 131 logic tests
 npm install --no-save playwright      # only needed for the browser suite
 npm run test:browser                  # 66 checks across both pages in Chromium
 ```
 
 The browser suite stubs the board API and the calendar feed, freezes the clock,
-and drives the real render path: a calendar entry classifying itself into the
-right row with the person lifted out of the title, one typed line becoming a
-full item, a ticked-off row greying out instead of vanishing, a calendar row
-ticking off without being editable, the board filling a 1080p screen without
-scrolling, the phone page not scrolling sideways, and the board still showing
-its calendar when its own store is unreachable.
+and drives the real render path against the real server: a calendar entry
+classifying itself into the right row with the person lifted out of the title,
+one typed line becoming a full item, a ticked-off row greying out instead of
+vanishing, a calendar row ticking off without being editable, the board filling
+a 1080p screen without scrolling, the phone page not scrolling sideways, and
+the board still showing its calendar when its own store is unreachable.
+
+The Node tests cover the API's own validation, the access gate (including that
+a forged cookie fails and that the key never appears in it), and that a
+calendar address is never handed to the browser.
 
 ## Deploying
 
