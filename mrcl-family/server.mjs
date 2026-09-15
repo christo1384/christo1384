@@ -216,6 +216,24 @@ async function selfCheck() {
     }
   }
 
+  // Every test runs against the in-memory store; production runs against Key
+  // Value. Connecting is not the same as persisting, and a store that accepts
+  // writes and loses them looks exactly like a family that forgot to add
+  // anything. Prove a round trip on one fixed scratch key, overwritten each
+  // boot so it cannot accumulate.
+  try {
+    const probe = { at: new Date().toISOString(), value: Math.random().toString(36).slice(2) };
+    await store.set('selfcheck', probe);
+    const read = await store.get('selfcheck');
+    if (read?.value === probe.value) {
+      console.log(`[self-check] ok store round trip (${store.backend})`);
+    } else {
+      console.error(`[self-check] FAILED store round trip (${store.backend}): wrote ${probe.value}, read back ${JSON.stringify(read)}`);
+    }
+  } catch (error) {
+    console.error(`[self-check] FAILED store round trip (${store.backend}): ${error.message}`);
+  }
+
   // A feed that is configured but unreachable leaves the board silently empty,
   // which looks identical to "nothing on this week". Say which it is.
   for (const feed of feeds) {

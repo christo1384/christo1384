@@ -185,10 +185,12 @@ test('the boot self-check reports every page as served', async (t) => {
   t.after(() => server.stop());
 
   // Give the check a moment to run, then read what it logged.
-  const lines = await server.collect(/self-check/, 5, 8000);
-  assert.equal(lines.length >= 5, true, lines.join(' | '));
+  const lines = await server.collect(/self-check/, 6, 8000);
+  assert.equal(lines.length >= 6, true, lines.join(' | '));
   assert.equal(lines.every((l) => l.includes('ok ')), true, lines.join(' | '));
   assert.equal(lines.some((l) => l.includes('FAILED')), false, lines.join(' | '));
+  // The store must be proven to persist, not merely to connect.
+  assert.equal(lines.some((l) => /store round trip/.test(l)), true, lines.join(' | '));
 });
 
 test('files outside public/ cannot be reached', async (t) => {
