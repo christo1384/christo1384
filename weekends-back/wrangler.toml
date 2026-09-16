@@ -1,0 +1,10 @@
+name = "weekends-back"
+main = "src/index.js"
+compatibility_date = "2026-08-22"
+
+# Serve src/index.html as a text import so the markup stays an editable
+# .html file instead of an escaped one-line string inside the Worker.
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
