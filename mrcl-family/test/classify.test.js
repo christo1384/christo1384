@@ -157,22 +157,29 @@ test('toBoardItem never produces an empty title', () => {
 test('the real calendar entries land in the right rows', () => {
   const names = ['Morgan', 'Regan', 'Christopher', 'Chris', 'Liliani', 'Lili'];
   const cases = [
-    // [title, row, who]
-    ["Morgan's birthday", 'birthday', 'Morgan'],
-    ["Chris's birthday", 'birthday', 'Chris'],
-    ["Lili's birthday", 'birthday', 'Lili'],
-    ["Regan's birthday", 'birthday', 'Regan'],
-    ["Lenny's birthday", 'birthday', ''],
-    ['Weekly pool maintenance (16,000 L)', 'chore', ''],
-    ['Morgan and Chris eye appointment', 'appointment', 'Morgan'],
-    ['Lili eye appointment super clinic 12:45', 'appointment', 'Lili'],
-    ['Twist Lilis plate', 'appointment', 'Lili'],
-    ['Regan physio', 'appointment', 'Regan'],
-    ['Liliani ortho appt', 'appointment', 'Liliani'],
+    // [title, row, shown title, who]
+    // In the birthdays band the person IS the content, so the name becomes the
+    // title rather than a suffix after the redundant word "birthday".
+    ["Morgan's birthday", 'birthday', 'Morgan', ''],
+    ["Chris's birthday", 'birthday', 'Chris', ''],
+    ["Lili's birthday", 'birthday', 'Lili', ''],
+    ["Regan's birthday", 'birthday', 'Regan', ''],
+    // A curly apostrophe is what a phone types. Same result, or the board
+    // shows a bare "'s birthday" on the wall.
+    ['Morgan\u2019s birthday', 'birthday', 'Morgan', ''],
+    // Not a family name, so nothing is lifted and the title stands as written.
+    ["Lenny's birthday", 'birthday', "Lenny's birthday", ''],
+    ['Weekly pool maintenance (16,000 L)', 'chore', 'Weekly pool maintenance (16,000 L)', ''],
+    ['Morgan and Chris eye appointment', 'appointment', 'Morgan and Chris eye appointment', 'Morgan'],
+    ['Lili eye appointment super clinic 12:45', 'appointment', 'eye appointment super clinic 12:45', 'Lili'],
+    ['Twist Lilis plate', 'appointment', 'Twist Lilis plate', 'Lili'],
+    ['Regan physio', 'appointment', 'physio', 'Regan'],
+    ['Liliani ortho appt', 'appointment', 'ortho appt', 'Liliani'],
   ];
-  for (const [title, category, who] of cases) {
+  for (const [title, category, shown, who] of cases) {
     const item = toBoardItem({ title, date: '2026-10-02', time: '' }, { names });
-    assert.equal(item.category, category, `${title} -> ${item.category}`);
+    assert.equal(item.category, category, `${title} -> row ${item.category}`);
+    assert.equal(item.title, shown, `${title} -> shows ${item.title}`);
     assert.equal(item.who, who, `${title} -> who ${item.who}`);
   }
 });

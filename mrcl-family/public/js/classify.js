@@ -85,6 +85,15 @@ const TRAILING_TIME = /[\s(–-]+\d{1,2}([:.]\d{2})?\s*(am|pm)\s*\)?$/i;
  */
 const TASK_OPENER = /^(please\s+)?(don'?t forget|remember|organi[sz]e|arrange|book|buy|order|plan|sort|chase|renew|pay|collect|pick up|drop off|wrap|post|ring|call|email|text|sign|return)\b/i;
 
+/**
+ * Phones type a curly apostrophe. A straight one only ever comes from a
+ * keyboard, so "Morgan’s birthday" added from Morgan's iPhone has to be read
+ * exactly like "Morgan's birthday" typed on a laptop -- otherwise the name is
+ * lifted out and a bare "’s birthday" is left on the wall.
+ */
+const APOS_CLASS = "'\u2019\u02bc";
+const APOS = `[${APOS_CLASS}]`;
+
 /** "Ruby turns 9" — a birthday written without the word. */
 const TURNS_AGE = /\bturns\s+\d{1,3}\b/i;
 
@@ -165,7 +174,7 @@ export function extractPerson(rawTitle, names = []) {
   if (!title || !names.length) return { who: '', title };
 
   for (const name of names) {
-    const leading = new RegExp(`^${escapeRegExp(name)}(?:'s|s'|s)?\\b[\\s:'-]*`, 'i');
+    const leading = new RegExp(`^${escapeRegExp(name)}(?:${APOS}s|s${APOS}|s)?\\b[\\s:${APOS_CLASS}-]*`, 'i');
     if (leading.test(title)) {
       const remainder = title.replace(leading, '').trim();
       // "Morgan and Chris eye appointment" is about two people: lifting the
@@ -178,7 +187,7 @@ export function extractPerson(rawTitle, names = []) {
   }
 
   for (const name of names) {
-    const trailing = new RegExp(`[\\s:,'-]+(?:for\\s+)?${escapeRegExp(name)}(?:'s|s'|s)?$`, 'i');
+    const trailing = new RegExp(`[\\s:,${APOS_CLASS}-]+(?:for\\s+)?${escapeRegExp(name)}(?:${APOS}s|s${APOS}|s)?$`, 'i');
     if (trailing.test(title)) {
       const remainder = title.replace(trailing, '').trim();
       return { who: name, title: remainder || title };
@@ -190,6 +199,9 @@ export function extractPerson(rawTitle, names = []) {
   }
   return { who: '', title };
 }
+
+/** All that is left of "Morgan's birthday" once "Morgan" is lifted out. */
+const BARE_BIRTHDAY = /^(birthdays?|bday|b-day)$/i;
 
 /** "Lili Ortho 8.20am" already has a start time; drop the one in the words. */
 export function stripRedundantTime(rawTitle, hasTime) {
@@ -210,7 +222,18 @@ export function toBoardItem(occurrence, { rules, fallback, names = [], defaultCa
 
   const withoutTime = stripRedundantTime(occurrence.title, Boolean(occurrence.time));
   const { category: prefixed, title: unprefixed } = stripPrefix(withoutTime);
-  const { who, title } = extractPerson(prefixed ? unprefixed : withoutTime, names);
+  let { who, title } = extractPerson(prefixed ? unprefixed : withoutTime, names);
+
+  // In every other row the name is a suffix: "Ortho · Lili". The birthdays
+  // band is the exception, because the row is already called BIRTHDAYS -- once
+  // the name is lifted out of "Morgan's birthday" the only word left is
+  // "birthday", and the board renders "birthday · Morgan", which is both
+  // backwards and says nothing the row label has not said already. Whose
+  // birthday it is *is* the content, so it becomes the title.
+  if (category === 'birthday' && who && BARE_BIRTHDAY.test(title)) {
+    title = who;
+    who = '';
+  }
 
   return {
     ...occurrence,

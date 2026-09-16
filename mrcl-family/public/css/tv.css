@@ -207,6 +207,7 @@ body.tv > [data-app] {
   font-size: var(--cell-text);
   line-height: 1.2;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.35em;
   align-items: baseline;
   min-width: 0;
@@ -220,7 +221,13 @@ body.tv > [data-app] {
 }
 
 .entry .entry-title {
-  overflow-wrap: anywhere;
+  /* `anywhere` also shrinks this flex item's min-content width to one
+     character, so a title next to a name gets starved and breaks mid-word --
+     "Regan physio" came out as "physi / o" on the wall. `break-word` keeps the
+     longest word as the minimum and only breaks one that cannot fit at all. */
+  overflow-wrap: break-word;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .entry .entry-who {
@@ -240,8 +247,12 @@ body.tv > [data-app] {
   color: var(--ink-faint);
 }
 
-.entry.from-calendar .entry-title::after {
-  content: " ·";
+/* The dot separates a title from the name after it. Hanging it off the title
+   put one on every calendar entry, including the ones with no name -- the pool
+   chore read "Weekly pool maintenance (16,000 L) ·", a bullet pointing at
+   nothing. It belongs to the name, so it lives there and appears only with it. */
+.entry.from-calendar .entry-who::before {
+  content: "· ";
   color: var(--ink-faint);
 }
 
