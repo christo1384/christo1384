@@ -32,6 +32,10 @@ export const DEFAULT_RULES = {
   chore: [
     'bins', 'bin night', 'rubbish', 'recycling', 'washing', 'laundry', 'tidy', 'clean',
     'vacuum', 'mow', 'lawns', 'chore', 'dishes', 'homework',
+    // The pool is the family's biggest standing chore and its entry says so:
+    // "Weekly pool maintenance (16,000 L)". Without these it lands in
+    // Appointments, next to the orthodontist.
+    'pool', 'pool maintenance', 'maintenance', 'filter', 'watering', 'weeds',
   ],
   family: [
     'outing', 'family outing', 'trip', 'zoo', 'museum', 'movie', 'movies', 'beach',
@@ -74,6 +78,16 @@ const PREFIX_ALIASES = {
 
 const TRAILING_TIME = /[\s(–-]+\d{1,2}([:.]\d{2})?\s*(am|pm)\s*\)?$/i;
 
+/**
+ * Titles that are an instruction to somebody rather than a thing happening.
+ * "Organise something for my wife's birthday in 2 weeks" mentions a birthday
+ * but is not one; without this it takes a slot in the birthdays band.
+ */
+const TASK_OPENER = /^(please\s+)?(don'?t forget|remember|organi[sz]e|arrange|book|buy|order|plan|sort|chase|renew|pay|collect|pick up|drop off|wrap|post|ring|call|email|text|sign|return)\b/i;
+
+/** "Ruby turns 9" — a birthday written without the word. */
+const TURNS_AGE = /\bturns\s+\d{1,3}\b/i;
+
 function escapeRegExp(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -109,16 +123,29 @@ export function classify(rawTitle, { rules = DEFAULT_RULES, fallback = DEFAULT_F
   if (prefixed) return prefixed;
   if (!title) return fallback;
 
+  const isTask = TASK_OPENER.test(title);
+
+  // "Ruby turns 9" is how a birthday gets written when nobody types the word.
+  // It is the example on the wireframe this board was drawn from.
+  if (!isTask && TURNS_AGE.test(title)) return 'birthday';
+
   let best = null;
   for (const [category, keywords] of Object.entries(rules)) {
     if (!isCategory(category)) continue;
+    // "Organise something for Morgan's birthday" is a job to do, not a
+    // birthday. The birthdays band is the most prominent thing on the kitchen
+    // screen, so a task must never be able to take a place in it.
+    if (isTask && category === 'birthday') continue;
     for (const keyword of keywords) {
       if (keyword.length > (best?.length ?? 0) && mentions(title, keyword)) {
         best = { category, length: keyword.length };
       }
     }
   }
-  return best ? best.category : fallback;
+  if (best) return best.category;
+  // A task that matched nothing else is a heads-up, not an appointment:
+  // nobody has to be anywhere for it.
+  return isTask ? 'note' : fallback;
 }
 
 /**

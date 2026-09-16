@@ -149,3 +149,50 @@ test('toBoardItem never produces an empty title', () => {
   assert.equal(item.title, 'Lili');
   assert.equal(item.who, 'Lili');
 });
+
+// Every title below was read off the family's own Google calendars on
+// 17 Sep 2026, not invented. The board has never rendered them, because the
+// calendar is not connected yet — so this is the check that it will look right
+// the moment it is, rather than needing another round of fixes.
+test('the real calendar entries land in the right rows', () => {
+  const names = ['Morgan', 'Regan', 'Christopher', 'Chris', 'Liliani', 'Lili'];
+  const cases = [
+    // [title, row, who]
+    ["Morgan's birthday", 'birthday', 'Morgan'],
+    ["Chris's birthday", 'birthday', 'Chris'],
+    ["Lili's birthday", 'birthday', 'Lili'],
+    ["Regan's birthday", 'birthday', 'Regan'],
+    ["Lenny's birthday", 'birthday', ''],
+    ['Weekly pool maintenance (16,000 L)', 'chore', ''],
+    ['Morgan and Chris eye appointment', 'appointment', 'Morgan'],
+    ['Lili eye appointment super clinic 12:45', 'appointment', 'Lili'],
+    ['Twist Lilis plate', 'appointment', 'Lili'],
+    ['Regan physio', 'appointment', 'Regan'],
+    ['Liliani ortho appt', 'appointment', 'Liliani'],
+  ];
+  for (const [title, category, who] of cases) {
+    const item = toBoardItem({ title, date: '2026-10-02', time: '' }, { names });
+    assert.equal(item.category, category, `${title} -> ${item.category}`);
+    assert.equal(item.who, who, `${title} -> who ${item.who}`);
+  }
+});
+
+// A job to do is not a thing happening. The birthdays band is the most
+// prominent strip on the kitchen screen, and this exact entry -- Morgan's
+// standing nudge to Chris -- repeats every three days through late September.
+test('a task about a birthday never reaches the birthdays band', () => {
+  assert.equal(classify("Organise something for my wife's birthday in 2 weeks"), 'note');
+  assert.equal(classify('Buy Lili a present'), 'note');
+  assert.equal(classify('Book the dentist'), 'appointment');
+  assert.equal(classify("Remember Morgan's birthday"), 'note');
+  // The birthday itself is untouched.
+  assert.equal(classify("Morgan's birthday"), 'birthday');
+  assert.equal(classify('Birthday party at the park'), 'family');
+});
+
+test('a birthday written without the word still lands in the band', () => {
+  assert.equal(classify('Ruby turns 9'), 'birthday');
+  assert.equal(classify('Lili turns 8'), 'birthday');
+  // ...unless it is a job to do.
+  assert.equal(classify('Buy a card, Ruby turns 9'), 'note');
+});
