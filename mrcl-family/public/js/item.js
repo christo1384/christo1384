@@ -1,8 +1,8 @@
 // The shape of one thing on the board, and the rules for what may be written.
 //
 // Both sides use this: the phone page for an instant message, and
-// netlify/functions/board.mjs before anything is written. Keeping one
-// definition means the two can never drift apart.
+// src/board-api.mjs before anything is written. Keeping one definition means
+// the two can never drift apart.
 
 import { CATEGORY_IDS, isCategory } from './categories.js';
 import { fromISODate } from './week.js';

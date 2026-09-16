@@ -4,7 +4,7 @@
 
 | | Before (July 2026) | Now |
 | --- | --- | --- |
-| Where config lived | `localStorage`, per device, per domain | The deploy, set once in Netlify |
+| Where config lived | `localStorage`, per device, per domain | The deploy, set once in the service's environment |
 | Setting up a phone | Gear icon, paste Firebase snippet, paste calendar ids, save, reload | Open the page |
 | Effect of renaming the site | Every device silently reset to "not set" | Nothing |
 | Kitchen screen | `/tv-display.html` | `/` (the old URL redirects) |
@@ -16,7 +16,7 @@
 ## The data
 
 Firebase is gone entirely — no project, no rules, no auth provider. The board's
-own data now lives in Netlify Blobs on the same site. Nothing was migrated out
+own data now lives in Render Key Value, behind the same service. Nothing was migrated out
 of the old Firestore, because the board ran for about ten days and nothing in
 it was worth keeping.
 

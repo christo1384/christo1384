@@ -2,8 +2,8 @@
 //
 // The browser talks to /api/board, /api/calendars and /api/calendar. Anything
 // that can hand this module a Request and return its Response can host the
-// board — server.mjs does it for Render, and it would sit behind a Netlify
-// function just as easily.
+// board — server.mjs does it for Render, and a serverless function on any
+// other host would do just as well.
 
 import { occurrencesInRange } from '../public/js/ics.js';
 import { isRepeating, validateItem, validateShoppingItem } from '../public/js/item.js';

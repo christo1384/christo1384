@@ -10,8 +10,9 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Playwright is deliberately not a dependency of this project: Netlify installs
-// nothing to build the site, and keeping it that way makes deploys instant.
+// Playwright is deliberately not a dependency of this project: a browser is a
+// few hundred megabytes that the deploy has no use for, and keeping it out of
+// package.json keeps the Render build small and fast.
 let chromium;
 try {
   ({ chromium } = await import('playwright'));

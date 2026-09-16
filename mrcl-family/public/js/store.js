@@ -1,7 +1,7 @@
 // Talking to the board's own store.
 //
 // Firebase is gone: no second console, no auth provider, no rules file, no SDK
-// off a CDN. The board's residual data lives in Netlify Blobs behind
+// off a CDN. The board's residual data lives in Render Key Value behind
 // /api/board on this same domain.
 //
 // Realtime push is traded for polling. On a kitchen wall that is invisible —

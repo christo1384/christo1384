@@ -5,7 +5,7 @@
 // exact domain — so renaming the Netlify site silently wiped every TV and
 // phone and each one had to be re-onboarded by hand.
 //
-// Now `npm run build` writes public/config.generated.js from the Netlify
+// Now `npm run build` writes public/config.generated.js from the deploy's own
 // environment variables, and every device that loads the page is already
 // set up. Nothing to paste, nothing to lose.
 

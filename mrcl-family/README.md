@@ -42,8 +42,8 @@ maintains that. It lasted ten days.
 So this version fixes both:
 
 **Configuration lives in the deploy, not on the device.** `npm run build`
-writes `public/config.generated.js` from the Netlify environment variables, and
-any screen that loads the page is already set up. Nothing to paste, nothing to
+writes `public/config.generated.js` from the deploy's environment variables,
+and any screen that loads the page is already set up. Nothing to paste, nothing to
 lose if the domain changes again.
 
 **The board reads the family's calendar instead of competing with it.** The
@@ -111,9 +111,14 @@ auth provider and no SDK loaded from a CDN.
 ## Where it runs
 
 Live at **https://mrcl-family.onrender.com** — one Render web service in
-Singapore, with a Render Key Value store behind it. Auto-deploys on push.
-Nothing about it is Render-specific: anything that can run `node server.mjs`
-will do.
+Singapore, with a Render Key Value store behind it. Nothing about it is
+Render-specific: anything that can run `node server.mjs` will do.
+
+**Pushes do not redeploy yet.** The service was created through Render's API
+with a repo URL, which does not install the GitHub webhook, so every deploy so
+far has been triggered by hand. Linking the repo in the Render dashboard fixes
+it; until then a push leaves the live site on the previous commit, which is
+exactly the kind of quiet drift that makes a board untrustworthy.
 
 ## Running it locally
 
@@ -160,23 +165,27 @@ calendar address is never handed to the browser.
 
 ## Deploying
 
-See [`docs/DEPLOY.md`](docs/DEPLOY.md). Short version: link the repo to
-Netlify, set `CALENDAR_ICS_URLS` and `FAMILY_NAMES`, and open the site on the
-kitchen screen. One console, no Firebase.
+See [`docs/DEPLOY.md`](docs/DEPLOY.md). Short version: one Render web service
+with a Render Key Value store behind it, `CALENDAR_ICS_URLS` and `FAMILY_NAMES`
+set in the service's environment, and the site opened once on the kitchen
+screen. One console, no Firebase.
 
-Two things catch people out, both covered there: Netlify needs a **base
-directory** of `mrcl-family` while this lives inside the profile repository,
-and Netlify's **secrets scanning** fails the build unless
-`SECRETS_SCAN_OMIT_KEYS` names `CALENDAR_ICS_URLS` — the build writes it into
-the deployed JavaScript on purpose.
+Two things catch people out, both covered there: the build and start commands
+have to `cd mrcl-family` first, because this lives inside the profile
+repository rather than at its root, and the repository has to be linked in the
+Render dashboard before a push will deploy anything.
 
 ## Two things worth knowing
 
 **The calendar feed URLs are secrets.** A Google Calendar "secret address in
 iCal format" grants read access to that calendar to anyone holding it, which is
-why they live in Netlify's environment and not in this public repository.
-`netlify/functions/calendar.mjs` only ever fetches URLs on the deploy's own
-allowlist, so the endpoint cannot be pointed anywhere else.
+why they live in the service's environment and not in this public repository —
+and why `tools/build-config.mjs` deliberately leaves them out of
+`public/config.generated.js`. They are never served to the browser: the pages
+ask `/api/calendars` for descriptors with no URLs in them, then fetch
+`/api/calendar?feed=0`. `parseFeeds` in `src/board-api.mjs` only accepts the
+addresses already in the deploy's own environment, and refuses anything that is
+not `https`, so the proxy cannot be aimed at Render's internal network.
 
 **There is no Content-Security-Policy header yet.** One is drafted in
 `docs/DEPLOY.md` under "Optional hardening", but it is left off by default: a
